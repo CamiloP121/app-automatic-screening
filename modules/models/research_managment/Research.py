@@ -12,14 +12,14 @@ class Research(db.base):
     __tablename__ = "researches"
 
     id = Column(String, primary_key=True)  # Id único de la investigación
-    name = Column(String)                  # Nombre de la investigación
+    name = Column(String, unique=True, nullable=False)                  # Nombre de la investigación
     description = Column(String)           # Descripción de la investigación
     created_at = Column(DateTime, default=datetime.now)   # Fecha de creación
     methodology = Column(String)           # Metodología a utilizar
     criteria_inclusion = Column(String)    # Criterios de inclusión
     is_active = Column(Boolean, default=True)  # Estado activo/inactivo
     is_test = Column(Boolean, default=False)  # Research de prueba o real
-    status = Column(String)                # Estado actual dentro del pipeline
+    step = Column(String)                # Estado actual dentro del pipeline
 
     # Relación con investigadores
     researcherOwnerId = Column(String, ForeignKey("users.username"))
@@ -112,6 +112,11 @@ class Research(db.base):
             existing = db.session.query(cls).filter_by(id=new_id).first()
             if not existing:
                 return new_id
+    
+    @classmethod
+    def name_exists(cls, name):
+        """Verifica si existe un Research con el name dado."""
+        return db.session.query(cls).filter_by(name=name).first() is not None
 
     @classmethod
     def get_researches(cls):
@@ -124,7 +129,7 @@ class Research(db.base):
             "id": r.id,
             "name": r.name,
             "description": r.description,
-            "status": r.status
+            "step": r.step
         } for r in resultados])
 
         return {row["id"]: row["name"] for _, row in df.iterrows()}
