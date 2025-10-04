@@ -57,10 +57,8 @@ def login(username: str = Form(..., description="Nombre de usuario"),
     if user.password_hash != password_hash:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Acceso denegado: contraseña incorrecta.")
     try:
-        # Actualizar last_login y updated_at
-        user.last_login = datetime.now()
-        user.updated_at = datetime.now()
-        Users.update(username, {"last_login": user.last_login, "updated_at": user.updated_at})
+        # Actualizar last_login
+        Users.update(username, {"last_login": datetime.now()})
         db.session.commit()  # Si tienes manejo de sesión
         return {"message": "Login successful", "username": username}
     except Exception as e:
