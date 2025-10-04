@@ -2,9 +2,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Sistema
+from pathlib import Path
 from modules.logger_config import logger
 
 print("||||| start configuration ai_app |||||")
+
+# db
+from modules.models import db # DB
+
+for folder in ["app-automatic-screening-volumen"]:
+   Path(folder).mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(
     title= "app-automatic-screening",
@@ -21,6 +29,9 @@ app.add_middleware(
     allow_methods=["*"],  # Permitir todos los métodos (GET, POST, PUT, DELETE, etc.)
     allow_headers=["*"],  # Permitir todos los headers
 )
+
+# Database
+db.base.metadata.create_all(bind = db.engine)
 
 print("||||| end configuration ai_app |||||")
 
