@@ -1,0 +1,41 @@
+test/
+temp/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*~
+*$py.class
+*.swp
+# C extensions
+*.so
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+.vscode/
+.idea/
+
+*/modules/models//.pickle
+
+*/modules/db//.db
+
+*/.sec_config
+
+*/.db
+
+log/
+
+*.db
+
+tmp_docs/
+
+storage/
+
+storage_faiss/
+
+store/
+
+storage/
+
+*.ipynb
