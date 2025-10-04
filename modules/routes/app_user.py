@@ -134,7 +134,7 @@ def get_user(username: str = Form(..., description="Nombre de usuario")):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener usuario: {str(e)}")
     
 @app_user.post("/inactivate", summary="Inactivar usuario", 
-               description="Desactiva el usuario (is_active=False)")
+               description="Desactiva el usuario")
 def inactivate_user(username: str = Form(..., description="Nombre de usuario")):
     try:
         user = Users.get_username(username)
@@ -149,7 +149,7 @@ def inactivate_user(username: str = Form(..., description="Nombre de usuario")):
 
 # Endpoint para activar usuario
 @app_user.post("/activate", summary="Activar usuario", 
-               description="Activa el usuario (is_active=True)")
+               description="Activa el usuario")
 def activate_user(username: str = Form(..., description="Nombre de usuario")):
     try:
         user = Users.get_username(username)
