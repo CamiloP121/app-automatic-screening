@@ -21,8 +21,8 @@ class Articles(db.base):
     is_active = Column(Boolean, default=True)  # Estado activo/inactivo
 
     # Relación con Research (si lo mantienes)
-    articleOwnerId = Column(String, ForeignKey("researches.id"))
-    articleOwner = relationship("Research", back_populates="articles")
+    articleOwnerId = Column(String, ForeignKey("datasets.id"))
+    articleOwner = relationship("Datasets", back_populates="articles")
 
     @classmethod
     def add(cls, dict_new):

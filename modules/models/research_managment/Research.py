@@ -22,7 +22,7 @@ class Research(db.base):
     status = Column(String)                # Estado actual dentro del pipeline
 
     # Relación con investigadores
-    researcherOwnerId = Column(String, ForeignKey("users.nickname"))
+    researcherOwnerId = Column(String, ForeignKey("users.username"))
     researcherOwner = relationship("Users", back_populates="researches")
 
     datasets = relationship("Datasets", back_populates="datasetOwner")

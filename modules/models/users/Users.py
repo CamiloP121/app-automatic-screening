@@ -11,7 +11,7 @@ import pandas as pd
 class Users(db.base):
     __tablename__ = "users"
 
-    nickname = Column(String, primary_key=True)     # Nickname único
+    username = Column(String, primary_key=True)     # username único
     name = Column(String, nullable=False)           # Nombre del usuario
     email = Column(String, unique=True, nullable=False)  # Email único
     password_hash = Column(String, nullable=False)  # Hash de la contraseña
@@ -19,11 +19,10 @@ class Users(db.base):
     is_active = Column(Boolean, default=True)       # Estado activo/inactivo
 
     created_at = Column(DateTime, default=datetime.now)   # Fecha de creación
-    updated_at = Column(DateTime, onupdate=datetime.now)  # Última modificación
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)  # Última modificación
     last_login = Column(DateTime)                         # Último acceso
 
     institution = Column(String)                 # Institución a la que pertenece
-    position = Column(String)                    # Cargo o rol académico
 
     # Relación con Research 
     researches = relationship("Research", back_populates="researcherOwner")
@@ -42,13 +41,13 @@ class Users(db.base):
             raise Exception("Error adding User")
 
     @classmethod
-    def update(cls, nickname, dict_update):
-        """Actualiza un User existente según su nickname."""
+    def update(cls, username, dict_update):
+        """Actualiza un User existente según su username."""
         try:
-            user = db.session.query(cls).filter_by(nickname=nickname).first()
+            user = db.session.query(cls).filter_by(username=username).first()
 
             if user is None:
-                raise Exception(f"User with nickname {nickname} not found.")
+                raise Exception(f"User with username {username} not found.")
 
             for key, value in dict_update.items():
                 if hasattr(user, key):
@@ -64,12 +63,12 @@ class Users(db.base):
             raise Exception("Error updating User")
         
     @classmethod
-    def deactivate(cls, nickname):
-        """Desactiva un usuario (is_active=False) según su nickname."""
+    def deactivate(cls, username):
+        """Desactiva un usuario (is_active=False) según su username."""
         try:
-            user = db.session.query(cls).filter_by(nickname=nickname).first()
+            user = db.session.query(cls).filter_by(username=username).first()
             if user is None:
-                raise Exception(f"User with nickname {nickname} not found.")
+                raise Exception(f"User with username {username} not found.")
 
             user.is_active = False
             # db.session.commit()
@@ -80,13 +79,13 @@ class Users(db.base):
             raise Exception("Error deactivating User")
 
     @classmethod
-    def delete(cls, nickname):
-        """Elimina un User por su nickname."""
+    def delete(cls, username):
+        """Elimina un User por su username."""
         try:
-            user = db.session.query(cls).filter_by(nickname=nickname).first()
+            user = db.session.query(cls).filter_by(username=username).first()
 
             if user is None:
-                raise Exception(f"User with nickname {nickname} not found.")
+                raise Exception(f"User with username {username} not found.")
 
             db.session.delete(user)
             # db.session.commit()
@@ -96,37 +95,37 @@ class Users(db.base):
             raise Exception("Error deleting User")
 
     @classmethod
-    def nickname_exists(cls, nickname):
-        """Verifica si existe un User con el nickname dado."""
-        return db.session.query(cls).filter_by(nickname=nickname).first() is not None
+    def username_exists(cls, username):
+        """Verifica si existe un User con el username dado."""
+        return db.session.query(cls).filter_by(username=username).first() is not None
 
     @classmethod
-    def get_nickname(cls, nickname):
-        """Obtiene un User por su nickname."""
-        return db.session.query(cls).filter_by(nickname=nickname).first()
+    def get_username(cls, username):
+        """Obtiene un User por su username."""
+        return db.session.query(cls).filter_by(username=username).first()
 
     @classmethod
-    def generate_unique_nickname(cls):
-        """Genera un nickname único no usado en la tabla User."""
+    def generate_unique_username(cls):
+        """Genera un username único no usado en la tabla User."""
         while True:
-            new_nickname = str(uuid.uuid4())
-            existing = db.session.query(cls).filter_by(nickname=new_nickname).first()
+            new_username = str(uuid.uuid4())
+            existing = db.session.query(cls).filter_by(username=new_username).first()
             if not existing:
-                return new_nickname
+                return new_username
 
     @classmethod
     def get_users(cls):
-        """Devuelve un diccionario {nickname: name} de todos los usuarios."""
+        """Devuelve un diccionario {username: name} de todos los usuarios."""
         resultados = db.session.query(cls).all()
         if not resultados:
             return None
 
         df = pd.DataFrame([{
-            "nickname": r.nickname,
+            "username": r.username,
             "name": r.name,
             "email": r.email,
             "role": r.role,
             "is_active": r.is_active
         } for r in resultados])
 
-        return {row["nickname"]: row["name"] for _, row in df.iterrows()}
+        return {row["username"]: row["name"] for _, row in df.iterrows()}

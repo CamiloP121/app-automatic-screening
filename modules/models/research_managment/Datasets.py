@@ -23,6 +23,9 @@ class Datasets(db.base):
     datasetOwnerId = Column(String, ForeignKey("researches.id"))
     datasetOwner = relationship("Research", back_populates="datasets")
 
+    articles = relationship("Articles", back_populates="articleOwner")
+    
+
     @classmethod
     def add(cls, dict_new):
         """Agrega un nuevo Dataset a la base de datos."""

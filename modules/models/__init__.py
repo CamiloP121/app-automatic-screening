@@ -25,7 +25,7 @@ db = DatabaseManager()
 
 logger.info("Complete creating or link DB")
 
-from .users import Users
-from .research_managment import Research
-from .research_managment import Datasets
-from .research_managment import Articles
+from .users.Users import *
+from .research_managment.Datasets import *
+from .research_managment.Articles import *
+from .research_managment.Research import *
