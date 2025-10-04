@@ -6,10 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from modules.logger_config import logger
 
-print("||||| start configuration ai_app |||||")
-
 # db
 from modules.models import db # DB
+
+# Routes
+from modules.routes import (app_user, # User
+                    )
+
+print("||||| start configuration ai_app |||||")
+
+
 
 for folder in ["app-automatic-screening-volumen"]:
    Path(folder).mkdir(parents=True, exist_ok=True)
@@ -29,6 +35,9 @@ app.add_middleware(
     allow_methods=["*"],  # Permitir todos los métodos (GET, POST, PUT, DELETE, etc.)
     allow_headers=["*"],  # Permitir todos los headers
 )
+
+# Routes
+app.include_router(app_user, prefix="/user")
 
 # Database
 db.base.metadata.create_all(bind = db.engine)
