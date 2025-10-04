@@ -1,0 +1,15 @@
+ruff==0.5.1
+pytest==7.4.4 
+apscheduler==3.10.4
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+requests
+ipython==7.34.0
+pydantic_settings==2.6.1
+SQLAlchemy==2.0.35
+pydantic_settings==2.6.1
+thinc==8.2.5
+joblib
+psycopg2==2.9.10
+pandas==2.2.2
+## add python modules here
