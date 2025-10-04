@@ -65,3 +65,62 @@ def login(username: str = Form(..., description="Nombre de usuario"),
         db.session.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error en acceso: {str(e)}")
     
+@app_user.put("/update", summary="Actualizar usuario", description="Actualiza los datos de un usuario por username")
+def update_user(username: str = Form(..., description="Nombre de usuario"),
+            name: str = Form(None, description="Nombres del usuario"),
+            email: str = Form(None, description="Correo electrónico del usuario"),
+            role: str = Form(None, description="Rol del usuario. Opciones: 'admin', 'reseracher', 'viwer'"),
+            institution: str = Form(None, description="Institución a la que pertenece el usuario")):
+    try:
+        request_data = {
+            "name": name,
+            "email": email,
+            "role": role,
+            "institution": institution
+        }
+        dict_update = {param: value for param, value in request_data.items() if value is not None and value.strip() != ""}
+        Users.update(username, dict_update)
+        db.session.commit()  # Si tienes manejo de sesión
+        return {"message": "Usuario actualizado", "username": username}
+    except Exception as e:
+        db.session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al actualizar usuario: {str(e)}")
+    
+
+@app_user.put("/update-password", summary="Actualizar contraseña", 
+              description="Actualiza la contraseña de un usuario por username")
+def update_password(username: str = Form(..., description="Nombre de usuario"),
+                new_password: str = Form(..., description="Nueva contraseña")):
+    try:
+        user = Users.get_username(username)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+        dict_update = {"password_hash": password_hash}
+        Users.update(username, dict_update)
+        # db.session.commit()  # Si tienes manejo de sesión
+        return {"message": "Contraseña actualizada", "username": username}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al actualizar contraseña: {str(e)}")
+    
+@app_user.post("/get-user", summary="Obtener usuario", 
+              description="Obtiene los datos de un usuario por username")
+def get_user(username: str = Form(..., description="Nombre de usuario")):
+    try:
+        user = Users.get_username(username)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        user_dict = {
+            "username": user.username,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "is_active": user.is_active,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
+            "last_login": user.last_login,
+            "institution": user.institution
+        }
+        return user_dict
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener usuario: {str(e)}")
