@@ -13,3 +13,4 @@ joblib
 psycopg2==2.9.10
 pandas==2.2.2
 ## add python modules here
+python-multipart==0.0.20
