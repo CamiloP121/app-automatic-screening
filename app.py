@@ -37,7 +37,7 @@ app.add_middleware(
 )
 
 # Routes
-app.include_router(app_user, prefix="/user")
+app.include_router(app_user, prefix="/user", tags=["Users"])
 
 # Database
 db.base.metadata.create_all(bind = db.engine)
