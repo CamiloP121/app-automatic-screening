@@ -96,12 +96,12 @@ def update_user(username: str = Form(..., description="Nombre de usuario"),
               description="Actualiza la contraseña de un usuario por username")
 def update_password(username: str = Form(..., description="Nombre de usuario"),
                 new_password: str = Form(..., description="Nueva contraseña")):
-    try:
-        user = Users.get_username(username)
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
-        if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
+    try:   
         password_hash = hashlib.sha256(new_password.encode()).hexdigest()
         dict_update = {"password_hash": password_hash}
         Users.update(username, dict_update)
@@ -113,11 +113,10 @@ def update_password(username: str = Form(..., description="Nombre de usuario"),
 @app_user.post("/get-user", summary="Obtener usuario", 
               description="Obtiene los datos de un usuario por username")
 def get_user(username: str = Form(..., description="Nombre de usuario")):
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
     try:
-        user = Users.get_username(username)
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
-        
         user_dict = {
             "username": user.username,
             "name": user.name,
@@ -136,10 +135,10 @@ def get_user(username: str = Form(..., description="Nombre de usuario")):
 @app_user.post("/inactivate", summary="Inactivar usuario", 
                description="Desactiva el usuario")
 def inactivate_user(username: str = Form(..., description="Nombre de usuario")):
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
     try:
-        user = Users.get_username(username)
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
         Users.update(username, {"is_active": False})
         db.session.commit()
         return {"message": "Usuario inactivado", "username": username}
@@ -151,13 +150,35 @@ def inactivate_user(username: str = Form(..., description="Nombre de usuario")):
 @app_user.post("/activate", summary="Activar usuario", 
                description="Activa el usuario")
 def activate_user(username: str = Form(..., description="Nombre de usuario")):
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
     try:
-        user = Users.get_username(username)
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
         Users.update(username, {"is_active": True})
         db.session.commit()
         return {"message": "Usuario activado", "username": username}
     except Exception as e:
         db.session.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al activar usuario: {str(e)}")
+    
+@app_user.post("/delete-user", summary="Eliminar usuario", 
+               description="Elimina un usuario si el solicitante es admin")
+def delete_user(username: str = Form(..., description="Username del solicitante"),
+                username_delete: str = Form(..., description="Username a eliminar")):
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario solicitante no encontrado.")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo un usuario admin puede eliminar usuarios.")
+    user_to_delete = Users.get_username(username_delete)
+    if not user_to_delete:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario a eliminar no encontrado.")
+    try:
+        Users.delete(username_delete)
+        db.session.commit()
+        return {"message": "Usuario eliminado", "username_deleted": username_delete}
+    except Exception as e:
+        db.session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al eliminar usuario: {str(e)}")
