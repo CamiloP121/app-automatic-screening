@@ -16,6 +16,10 @@ __pypackages__/
 .vscode/
 .idea/
 
+/app-automatic-screening-volumen
+
+*/app-automatic-screening-volumen//.db
+
 */modules/models//.pickle
 
 */modules/db//.db
