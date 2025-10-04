@@ -10,8 +10,6 @@ from modules.models import db, Users
 
 app_user = APIRouter()
 
-
-
 @app_user.post("/register", summary="Registro de usuario", 
                description="Este endpoint permite a un nuevo usuario registrarse")
 def register(username: str = Form(..., description="Nombre de usuario"),
@@ -51,6 +49,8 @@ def login(username: str = Form(..., description="Nombre de usuario"),
     user = Users.get_username(username)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Acceso denegado: el usuario no existe.")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
     
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     
@@ -71,6 +71,11 @@ def update_user(username: str = Form(..., description="Nombre de usuario"),
             email: str = Form(None, description="Correo electrónico del usuario"),
             role: str = Form(None, description="Rol del usuario. Opciones: 'admin', 'reseracher', 'viwer'"),
             institution: str = Form(None, description="Institución a la que pertenece el usuario")):
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
     try:
         request_data = {
             "name": name,
@@ -95,6 +100,8 @@ def update_password(username: str = Form(..., description="Nombre de usuario"),
         user = Users.get_username(username)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
         password_hash = hashlib.sha256(new_password.encode()).hexdigest()
         dict_update = {"password_hash": password_hash}
         Users.update(username, dict_update)
@@ -110,6 +117,7 @@ def get_user(username: str = Form(..., description="Nombre de usuario")):
         user = Users.get_username(username)
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        
         user_dict = {
             "username": user.username,
             "name": user.name,
@@ -124,3 +132,32 @@ def get_user(username: str = Form(..., description="Nombre de usuario")):
         return user_dict
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener usuario: {str(e)}")
+    
+@app_user.post("/inactivate", summary="Inactivar usuario", 
+               description="Desactiva el usuario (is_active=False)")
+def inactivate_user(username: str = Form(..., description="Nombre de usuario")):
+    try:
+        user = Users.get_username(username)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        Users.update(username, {"is_active": False})
+        db.session.commit()
+        return {"message": "Usuario inactivado", "username": username}
+    except Exception as e:
+        db.session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al inactivar usuario: {str(e)}")
+
+# Endpoint para activar usuario
+@app_user.post("/activate", summary="Activar usuario", 
+               description="Activa el usuario (is_active=True)")
+def activate_user(username: str = Form(..., description="Nombre de usuario")):
+    try:
+        user = Users.get_username(username)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        Users.update(username, {"is_active": True})
+        db.session.commit()
+        return {"message": "Usuario activado", "username": username}
+    except Exception as e:
+        db.session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al activar usuario: {str(e)}")
