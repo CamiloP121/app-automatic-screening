@@ -161,7 +161,7 @@ def activate_user(username: str = Form(..., description="Nombre de usuario")):
         db.session.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al activar usuario: {str(e)}")
     
-@app_user.post("/delete-user", summary="Eliminar usuario", 
+@app_user.delete("/delete-user", summary="Eliminar usuario", 
                description="Elimina un usuario si el solicitante es admin")
 def delete_user(username: str = Form(..., description="Username del solicitante"),
                 username_delete: str = Form(..., description="Username a eliminar")):
