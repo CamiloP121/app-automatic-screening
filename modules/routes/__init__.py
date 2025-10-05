@@ -1,2 +1,2 @@
 from .app_user import app_user
-from .app_reseharch import app_reseharch
+from .app_research import app_research
