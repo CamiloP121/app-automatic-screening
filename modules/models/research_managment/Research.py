@@ -119,17 +119,45 @@ class Research(db.base):
         return db.session.query(cls).filter_by(name=name).first() is not None
 
     @classmethod
-    def get_researches(cls):
+    def get_by_owner(cls, username):
+        """Devuelve todas las investigaciones cuyo researcherOwnerId coincide con el username dado."""
+        resultados = db.session.query(cls).filter_by(researcherOwnerId=username).all()
+        r_dict = {}
+        for r in resultados:
+            if r.researcherOwnerId not in r_dict:
+                r_dict[r.researcherOwnerId] = []
+            r_dict[r.researcherOwnerId].append({
+                "id": r.id,
+                "name": r.name,
+                "description": r.description,
+                "created_at": r.created_at,
+                "methodology": r.methodology,
+                "criteria_inclusion": r.criteria_inclusion.split("|&|") if r.criteria_inclusion else [],
+                "is_active": r.is_active,
+                "is_test": r.is_test,
+                "step": r.step
+            })
+        return r_dict
+
+    @classmethod
+    def get_all(cls):
         """Devuelve un diccionario {id: name} de todas las investigaciones."""
         resultados = db.session.query(cls).all()
         if not resultados:
             return None
-
-        df = pd.DataFrame([{
-            "id": r.id,
-            "name": r.name,
-            "description": r.description,
-            "step": r.step
-        } for r in resultados])
-
-        return {row["id"]: row["name"] for _, row in df.iterrows()}
+        r_dict = {}
+        for r in resultados:
+            if r.researcherOwnerId not in r_dict:
+                r_dict[r.researcherOwnerId] = []
+            r_dict[r.researcherOwnerId].append({
+                "id": r.id,
+                "name": r.name,
+                "description": r.description,
+                "created_at": r.created_at,
+                "methodology": r.methodology,
+                "criteria_inclusion": r.criteria_inclusion.split("|&|") if r.criteria_inclusion else [],
+                "is_active": r.is_active,
+                "is_test": r.is_test,
+                "step": r.step
+            })
+        return r_dict
