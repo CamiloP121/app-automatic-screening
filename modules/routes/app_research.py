@@ -13,7 +13,7 @@ app_research = APIRouter()
 @app_research.post("/create", summary="Registro de investigación", 
     description="Este endpoint permite registrar una nueva investigación en el sistema",
     tags = ["Research Management"])
-def create(
+def create_research(
     username: str = Form(..., description="Nombre de usuario que crea la investigación"),
     name: str = Form(..., description="Nombre de la investigación"),
     description: str = Form(None, description="Descripción de la investigación"),
@@ -113,7 +113,9 @@ def get_research(username: str = Form(..., description="Nombre de usuario")):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener investigaciones: {str(e)}")
 
 # Inactivar investigación
-@app_research.post("/inactivate", summary="Inactivar investigación", description="Desactiva una investigación")
+@app_research.post("/inactivate", summary="Inactivar investigación", 
+                   description="Desactiva una investigación",
+                   tags = ["Research Management"])
 def inactivate_research(username: str = Form(..., description="Nombre de usuario"), 
                         research_id: str = Form(..., description="ID de la investigación")):
     user = Users.get_username(username)
@@ -133,7 +135,9 @@ def inactivate_research(username: str = Form(..., description="Nombre de usuario
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al inactivar investigación: {str(e)}")
 
 # Activar investigación
-@app_research.post("/activate", summary="Activar investigación", description="Activa una investigación")
+@app_research.post("/activate", summary="Activar investigación", 
+                   description="Activa una investigación",
+                   tags = ["Research Management"])
 def activate_research(username: str = Form(..., description="Nombre de usuario"), 
                       research_id: str = Form(..., description="ID de la investigación")):
     user = Users.get_username(username)
