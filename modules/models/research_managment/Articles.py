@@ -14,11 +14,13 @@ class Articles(db.base):
     title = Column(String, nullable=False)  # Título del artículo
     abstract = Column(String, nullable=False)  # Resumen
     abstract_original = Column(String, nullable=False)  # Resumen original
-    year = Column(Integer, nullable=False)  # Año de publicación
+    year = Column(Integer, nullable=True)  # Año de publicación
     label = Column(String)  # Etiqueta o clasificación
     created_at = Column(DateTime, default=datetime.now)   # Fecha de creación
     updated_at = Column(DateTime, onupdate=datetime.now)  # Última modificación
     is_active = Column(Boolean, default=True)  # Estado activo/inactivo
+    label = Column(String)  # Etiqueta o clasificación
+    prediction = Column(String)  # Predicción del modelo
 
     # Relación con Research (si lo mantienes)
     articleOwnerId = Column(String, ForeignKey("datasets.id"))
