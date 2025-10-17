@@ -15,3 +15,10 @@ pandas==2.2.2
 ## add python modules here
 python-multipart==0.0.20
 googletrans==4.0.2
+langchain==0.3.27
+langchain-community==0.3.27
+thefuzz==0.22.1
+langchain-openai==0.3.30
+langchain-postgres==0.0.15
+psycopg[binary,pool]==3.2.9
+langchain-huggingface==0.3.1
