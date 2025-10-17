@@ -12,7 +12,8 @@ from modules.models import db # DB
 # Routes
 from modules.routes import (app_user, # User
                             app_research, # Research management
-                            app_loader # Data loader
+                            app_loader, # Data loader
+                            app_retriever # Retriever management
                     )
 
 print("||||| start configuration ai_app |||||")
@@ -42,6 +43,7 @@ app.add_middleware(
 app.include_router(app_user, prefix="/user", tags=["Users"])
 app.include_router(app_research, prefix="/research", tags=["Research Management"])
 app.include_router(app_loader, prefix="/data", tags=["Data Loading"])
+app.include_router(app_retriever, prefix="/retriever", tags=["Retriever"])
 
 # Database
 db.base.metadata.create_all(bind = db.engine)
