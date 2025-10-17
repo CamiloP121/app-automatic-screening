@@ -3,7 +3,7 @@ from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from ...models import db
-
+import pandas as pd
 # Generales
 import uuid
 
@@ -111,3 +111,27 @@ class Articles(db.base):
             existing = db.session.query(cls).filter_by(id=new_id).first()
             if not existing:
                 return new_id
+            
+    @classmethod
+    def get_all_by_dataset(cls, dataset_id):
+        """Obtiene todos los artículos asociados a un dataset específico."""
+        articles = db.session.query(cls).filter_by(articleOwnerId=dataset_id).all()
+        if not articles:
+            return pd.DataFrame()  # Retorna DataFrame vacío si no hay artículos
+        articles_list = []
+        for article in articles:
+            articles_list.append({
+                "id": article.id,
+                "title": article.title,
+                "abstract": article.abstract,
+                "abstract_original": article.abstract_original,
+                "year": article.year,
+                "label": article.label,
+                "prediction": article.prediction,
+                "created_at": article.created_at,
+                "updated_at": article.updated_at,
+                "is_active": article.is_active,
+                "articleOwnerId": article.articleOwnerId
+            })
+        return pd.DataFrame(articles_list)
+        

@@ -128,3 +128,24 @@ class Datasets(db.base):
         } for r in resultados])
 
         return {row["id"]: row["filename"] for _, row in df.iterrows()}
+    
+    @classmethod
+    def get_all_by_research(cls, dataset_id):
+        """Devuelve todos los datasets cuyo datasetOwnerId coincide con el research_id dado."""
+        resultados = db.session.query(cls).filter_by(datasetOwnerId=dataset_id).all()
+        if not resultados:
+            return pd.DataFrame()
+        data = []
+        for r in resultados:
+
+            data.append({
+                "id": r.id,
+                "filename": r.filename,
+                "created_at": r.created_at,
+                "updated_at": r.updated_at,
+                "methodology": r.methodology,
+                "number_of_records": r.number_of_records,
+                "is_active": r.is_active
+            })
+
+        return pd.DataFrame(data)
