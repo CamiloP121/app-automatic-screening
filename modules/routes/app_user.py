@@ -105,9 +105,10 @@ def update_password(username: str = Form(..., description="Nombre de usuario"),
         password_hash = hashlib.sha256(new_password.encode()).hexdigest()
         dict_update = {"password_hash": password_hash}
         Users.update(username, dict_update)
-        # db.session.commit()  # Si tienes manejo de sesión
+        db.session.commit()  # Si tienes manejo de sesión
         return {"message": "Contraseña actualizada", "username": username}
     except Exception as e:
+        db.session.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al actualizar contraseña: {str(e)}")
     
 @app_user.post("/get-user", summary="Obtener usuario", 
