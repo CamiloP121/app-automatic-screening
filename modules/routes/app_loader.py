@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
+from typing import List
 # Async
 import asyncio
 # Db
@@ -28,7 +29,6 @@ translator = Translator()
     "/load-data",
     summary="Cargar datos a la investigación", 
     description="Este endpoint permite cargar datos (datasets o artículos) a una investigación específica",
-    tags=["Data Loading"]
 )
 async def load_as(username: str = Form(..., description="Nombre de usuario que realiza la carga"),
     research_id: str = Form(..., description="ID de la investigación a la que se cargarán los datos"),
@@ -122,3 +122,54 @@ async def load_as(username: str = Form(..., description="Nombre de usuario que r
             os.remove(os.path.join(SAVE_TMP_FILE, filename))
         except Exception as e:
             logger.warning(f"Could not delete temporary file {filename}: {e}")
+
+@app_loader.post("/list-datasets", summary="Listar datasets de una investigación", 
+                description="Este endpoint devuelve una lista de datasets asociados a una investigación específica")
+def list_datasets(research_id: str = Form(..., description="ID de la investigación")):
+    research = Research.get_id(research_id)
+    if not research:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"La investigación con ID {research_id} no existe")
+    datasets = db.session.query(Datasets).filter_by(datasetOwnerId=research_id).all()
+    result = []
+    for dataset in datasets:
+        result.append({
+            "id": dataset.id,
+            "filename": dataset.filename,
+            "created_at": dataset.created_at,
+            "updated_at": dataset.updated_at,
+            "number_of_records": dataset.number_of_records
+        })
+    return {"research_id": research_id, "datasets": result}
+
+@app_loader.delete("/delete-dataset", summary="Eliminar un dataset",
+                    description="Este endpoint elimina un dataset y todos sus artículos asociados")
+def delete_dataset(dataset_id: str = Form(..., description="ID del dataset a eliminar")):
+    dataset = db.session.query(Datasets).filter_by(id=dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"El dataset con ID {dataset_id} no existe")
+    try:
+        # Eliminar artículos asociados
+        db.session.query(Articles).filter_by(articleOwnerId=dataset_id).delete()
+        # Eliminar dataset
+        db.session.delete(dataset)
+        db.session.commit()
+        logger.info(f"Dataset {dataset_id} and its articles deleted successfully")
+        return {"message": f"Dataset {dataset_id} and its articles deleted successfully"}
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting dataset {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error deleting dataset: {str(e)}")
+    
+@app_loader.delete("/delete-articles", summary="Eliminar todos los artículos de un dataset",
+                    description="Este endpoint elimina todos los artículos asociados a un dataset específico")
+def delete_articles(dataset_id: str = Form(..., description="ID del dataset cuyos artículos se eliminarán"), 
+                    article_ids: List[str] = Form(None, description="IDs de artículos a eliminar")):
+    dataset = db.session.query(Datasets).filter_by(id=dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"El dataset con ID {dataset_id} no existe")
+    try:
+        pass
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error deleting articles from dataset {dataset_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error deleting articles: {str(e)}")
