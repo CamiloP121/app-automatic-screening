@@ -6,7 +6,7 @@ from fastapi import status, HTTPException
 from datetime import datetime
 
 # Db
-from modules.models import db, Users, Research, Articles, AiLabeled
+from modules.models import db, Users, Research, Articles, AiLabeler
 
 # LLM Model
 from modules.core.chat_llm import ChatLLM
@@ -47,7 +47,7 @@ def labeler(username: str = Form(..., description="Nombre de usuario"),
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Artículo con ID {article_id} no encontrado.")
 
-        response = AiLabeled.get_prediction_reasoning(article.id, research.id)
+        response = AiLabeler.get_prediction_reasoning(article.id, research.id)
         if response:
             logger.info(f"Artículo {article_id} ya etiquetado previamente.")
         
@@ -74,7 +74,7 @@ def labeler(username: str = Form(..., description="Nombre de usuario"),
                     "create_at": datetime.now(),
                     "update_at": datetime.now(),
                 }
-            AiLabeled.add(dict_new)
+            AiLabeler.add(dict_new)
             logger.info(f"Artículo {article.id} etiquetado correctamente.")
         db.session.commit()
 
@@ -108,7 +108,7 @@ async def labeler_async(username: str = Form(..., description="Nombre de usuario
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Artículo con ID {article_id} no encontrado.")
 
-        response = AiLabeled.get_prediction_reasoning(article.id, research.id)
+        response = AiLabeler.get_prediction_reasoning(article.id, research.id)
         if response:
             logger.info(f"Artículo {article_id} ya etiquetado previamente.")
         
@@ -135,7 +135,7 @@ async def labeler_async(username: str = Form(..., description="Nombre de usuario
                     "create_at": datetime.now(),
                     "update_at": datetime.now(),
                 }
-            AiLabeled.add(dict_new)
+            AiLabeler.add(dict_new)
             logger.info(f"Artículo {article.id} etiquetado correctamente.")
         db.session.commit()
 
@@ -153,7 +153,7 @@ async def labeler_async(username: str = Form(..., description="Nombre de usuario
 @app_labeler.get("/summary", summary="Resumen de etiquetado de artículos",
                  description="Devuelve un resumen de los artículos etiquetados para una investigación.")
 def labeler_summary(research_id: str):
-    items = AiLabeled.get_by_research(research_id)
+    items = AiLabeler.get_by_research(research_id)
     total_items = len(items)
     complete_true = sum(1 for i in items if i["flag_complete"])
     complete_false = total_items - complete_true
@@ -177,7 +177,7 @@ def labeler_reprocess(research_id: str = Form(..., description="ID de la investi
     if not research.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La investigación está inactiva.")
 
-    items = AiLabeled.get_by_research(research_id)
+    items = AiLabeler.get_by_research(research_id)
     if method == "fails":
         items = [i for i in items if not i["flag_complete"]]
     elif method != "all":
@@ -209,7 +209,7 @@ def labeler_reprocess(research_id: str = Form(..., description="ID de la investi
             "update_at": datetime.now(),
         }
         try:
-            AiLabeled.update(item["id_article"], dict_update)
+            AiLabeler.update(item["id_article"], dict_update)
             reprocessed.append(item["id_article"])
         except Exception as e:
             logger.error(f"Error reprocesando artículo {item['id_article']}: {e}")
