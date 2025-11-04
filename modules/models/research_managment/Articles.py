@@ -20,11 +20,13 @@ class Articles(db.base):
     updated_at = Column(DateTime, onupdate=datetime.now)  # Última modificación
     is_active = Column(Boolean, default=True)  # Estado activo/inactivo
     label = Column(String)  # Etiqueta o clasificación
-    prediction = Column(String)  # Predicción del modelo
 
-    # Relación con Research (si lo mantienes)
+    # Relación con Research
     articleOwnerId = Column(String, ForeignKey("datasets.id"))
     articleOwner = relationship("Datasets", back_populates="articles")
+    # Relacion con predicciones ML y AI
+    ai_labelers = relationship("AiLabeler", back_populates="ResearchOwner")
+    ml_classifiers = relationship("MlClassifier", back_populates="ResearchOwner")
 
     @classmethod
     def add(cls, dict_new):
@@ -127,7 +129,6 @@ class Articles(db.base):
                 "abstract_original": article.abstract_original,
                 "year": article.year,
                 "label": article.label,
-                "prediction": article.prediction,
                 "created_at": article.created_at,
                 "updated_at": article.updated_at,
                 "is_active": article.is_active,

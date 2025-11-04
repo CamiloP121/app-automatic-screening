@@ -29,4 +29,6 @@ from .users.Users import *
 from .research_managment.Datasets import *
 from .research_managment.Articles import *
 from .research_managment.Research import *
-from .ai_models.AiLabeled import *
+from .ai_models.AiLabeler import *
+from .ai_models.Train import *
+from .ai_models.MlClassifier import *

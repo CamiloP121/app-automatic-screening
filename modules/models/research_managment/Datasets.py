@@ -130,9 +130,9 @@ class Datasets(db.base):
         return {row["id"]: row["filename"] for _, row in df.iterrows()}
     
     @classmethod
-    def get_all_by_research(cls, dataset_id):
+    def get_all_by_research(cls, research_id):
         """Devuelve todos los datasets cuyo datasetOwnerId coincide con el research_id dado."""
-        resultados = db.session.query(cls).filter_by(datasetOwnerId=dataset_id).all()
+        resultados = db.session.query(cls).filter_by(datasetOwnerId=research_id).all()
         if not resultados:
             return pd.DataFrame()
         data = []

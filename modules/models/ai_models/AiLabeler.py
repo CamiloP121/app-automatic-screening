@@ -2,12 +2,12 @@
 from sqlalchemy import Column, String, Boolean, DateTime, Integer, ForeignKey
 from datetime import datetime
 from sqlalchemy.orm import relationship
-from .. import db
+from .. import db, Articles, Datasets
 
-class AiLabeled(db.base):
-    __tablename__ = "ai_labeled"
+class AiLabeler(db.base):
+    __tablename__ = "ai_labelers"
 
-    id_article = Column(String, primary_key=True, nullable=False)
+    id_article = Column(String, ForeignKey("articles.id"), primary_key=True, nullable=False)
     prompt_input = Column(String)
     prediction = Column(String)
     reasoning = Column(String)
@@ -18,8 +18,7 @@ class AiLabeled(db.base):
     create_at = Column(DateTime, default=datetime.now)
     update_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    ResearchOwnerId = Column(String, ForeignKey("researches.id"))
-    ResearchOwner = relationship("Research", back_populates="ai_labeled")
+    ArticleOwner = relationship("Articles", back_populates="ai_labelers")
 
 
     @classmethod
@@ -73,15 +72,11 @@ class AiLabeled(db.base):
         """Obtiene un registro AiLabeled por su id_article."""
         return db.session.query(cls).filter_by(id_article=id_article).first()
 
-    @classmethod
-    def get_by_article_research(cls, id_article, research_id):
-        """Obtiene un registro AiLabeled por id_article e ResearchOwnerId."""
-        return db.session.query(cls).filter_by(id_article=id_article, ResearchOwnerId=research_id).first()
 
     @classmethod
-    def get_prediction_reasoning(cls, id_article, research_id):
+    def get_prediction_reasoning(cls, id_article):
         """Devuelve prediction y reasoning si existe el registro, sino None."""
-        label = cls.get_by_article_research(id_article, research_id)
+        label = cls.get_id(id_article)
         if label:
             return {"prediction": label.prediction, "reasoning": label.reasoning}
         return None
@@ -89,7 +84,16 @@ class AiLabeled(db.base):
     @classmethod
     def get_by_research(cls, research_id):
         """Devuelve todos los items etiquetados cuyo ResearchOwnerId coincide con el research_id dado."""
-        resultados = db.session.query(cls).filter_by(ResearchOwnerId=research_id).all()
+        df_datasets = Datasets.get_all_by_research(research_id)
+        if df_datasets.empty:
+            return []
+        dataset_ids = df_datasets['id'].tolist()
+
+        df_articles = [Articles.get_all_by_dataset(dataset_id) for dataset_id in dataset_ids]
+        if not df_articles:
+            return []
+        article_ids = [article['id'] for df in df_articles for article in df]
+        resultados = db.session.query(cls).filter(cls.ArticleOwnerId.in_(article_ids)).all()
         items = []
         for r in resultados:
             items.append({

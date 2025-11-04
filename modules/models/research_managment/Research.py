@@ -27,8 +27,11 @@ class Research(db.base):
     researcherOwnerId = Column(String, ForeignKey("users.username"))
     researcherOwner = relationship("Users", back_populates="researches")
 
+    # Relacion con Datasets
     datasets = relationship("Datasets", back_populates="datasetOwner")
-    ai_labeled = relationship("AiLabeled", back_populates="ResearchOwner")
+    # Relacion con Modelos Entrenados
+    trained_models = relationship("TrainedModel", back_populates="ResearchOwner")
+    
 
     @classmethod
     def add(cls, dict_new):
