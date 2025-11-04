@@ -23,3 +23,38 @@ def saveFAPIFile(file: object, folder_save: str):
         # Print the error and raise an exception with the filename
         print(e)
         raise Exception("Error in saving file: ", file.filename)
+    
+def load_text(path_file: str) -> str:
+    """
+    Loads the content of a .txt file into a string.
+    
+    Parameters:
+    -----------
+    path_file : str
+        The path to the .txt file to be loaded.
+    
+    Raises:
+    -------
+    AssertionError:
+        If the file does not exist or if the file extension is not .txt.
+    Exception:
+        If the file cannot be read, with an additional message indicating the specific file.
+    
+    Returns:
+    --------
+    str:
+        The content of the file as a string.
+    """
+    assert os.path.exists(path_file), "No file exists"
+    _, ext = os.path.splitext(path_file)
+
+    assert ext == ".txt", "Extension not allowed. Valid extension is .txt" 
+
+    template = ""
+    try:
+        with open(path_file, 'r') as f:
+            template += str(f.read()) + "\n"
+    except Exception as e:
+        print(e)
+        raise Exception(f"Could not read file {path_file}")
+    return template
