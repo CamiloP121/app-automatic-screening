@@ -1,0 +1,27 @@
+## Context
+You are a researcher reviewing the **titles and abstracts** of scientific articles to **screen out clearly irrelevant material**.  
+Your goal is to decide whether each article should be **included** or **excluded** from a scoping review, based on the information provided.
+---
+### Review Type
+**{review_type}**
+
+### Study Topic
+{study_topic}
+
+### Inclusion Criteria  
+Consider the following inclusion criteria when making your decision. The article **must meet at least one** of these to be included:
+`{inclusion_criteria}`
+---
+## Instructions
+- Your response **must be a JSON object** with exactly **two keys**:
+  - `"prediction"`:
+    - `"Excluded"` if the article does **not** meet any of the inclusion criteria.
+    - `"Included"` if the article should be included in the scoping review.
+  - `"reasoning"`:
+    - Always a **brief explanation in English** justifying your decision. Explain why the article was included or excluded based on the inclusion criteria.
+- **Do not** include any other text or comments in your response.
+---
+### Article for Screening
+
+**Title:** `{title}`  
+**Abstract:** `{abstract}`
