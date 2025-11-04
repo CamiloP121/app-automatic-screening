@@ -1,5 +1,5 @@
 # API
-from fastapi import APIRouter, Form
+from fastapi import APIRouter, Form, Body
 from fastapi import status, HTTPException
 
 # General
@@ -15,10 +15,10 @@ app_research = APIRouter()
     tags = ["Research Management"])
 def create_research(
     username: str = Form(..., description="Nombre de usuario que crea la investigación"),
-    name: str = Form(..., description="Nombre de la investigación"),
-    description: str = Form(None, description="Descripción de la investigación"),
+    title: str = Form(..., description="Título de la investigación"),
+    type_research: str = Form(..., description="Tipo de investigación"),
     methodology: str = Form('Partial', description="Metodología a utilizar. Opciones: 'Full', 'Partial'"),
-    criteria_inclusion: List[str] = Form(..., description="Lista de criterios de inclusión"),
+    criteria_inclusion: List[str] = Body(..., description="Lista de criterios de inclusión"),
     is_active: bool = Form(True, description="Estado activo o inactivo"),
     is_test: bool = Form(False, description="Indica si es investigación de prueba")
 ):
@@ -30,18 +30,19 @@ def create_research(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
     if user.role not in ['admin', 'researcher']:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene permisos para crear investigaciones.")
-    if Research.name_exists(name = name):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El nombre de la investigación ya existe.")
+    if Research.title_exists(title):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El título de la investigación ya existe.")
     # Generar un ID único
     research_id = Research.generate_unique_id()  
 
+    save_criteria_inclusion = "|&|".join(criteria_inclusion[0].split(',')) if criteria_inclusion else None
+    
     dict_new = {
         "id": research_id,
-        "name": name,
-        "description": description,
-        "created_at": datetime.now(),
+        "title": title,
+        "type_research": type_research,
+        "criteria_inclusion": save_criteria_inclusion,
         "methodology": methodology,
-        "criteria_inclusion": "|&|".join(criteria_inclusion),
         "is_active": is_active,
         "is_test": is_test,
         "step": 'Create Research',
@@ -52,7 +53,7 @@ def create_research(
         Research.add(dict_new)
         db.session.commit()
         return {
-            "message": "Research registered successfully", "id": research_id, "name": name}
+            "message": "Research registered successfully", "id": research_id, "title": title}
     except Exception as e:
         db.session.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail=f"Error al crear investigación: {str(e)}")
@@ -62,7 +63,8 @@ def create_research(
 def update_research(
     username: str = Form(..., description="Nombre de usuario que solicita la actualización"),
     research_id: str = Form(..., description="ID de la investigación"),
-    name: str = Form(None, description="Nuevo nombre de la investigación"),
+    title: str = Form(None, description="Nuevo título de la investigación"),
+    type_research: str = Form(None, description="Nuevo tipo de investigación"),
     description: str = Form(None, description="Nueva descripción"),
     methodology: str = Form(None, description="Nueva metodología"),
     criteria_inclusion: List[str] = Form(None, description="Nuevos criterios de inclusión"),
@@ -80,7 +82,8 @@ def update_research(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tiene permisos para actualizar esta investigación.")
     try:
         request_data = {
-            "name": name,
+            "title": title,
+            "type_research": type_research,
             "description": description,
             "methodology": methodology,
             "criteria_inclusion": "|&|".join(criteria_inclusion) if criteria_inclusion else None,

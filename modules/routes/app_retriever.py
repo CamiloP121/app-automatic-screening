@@ -69,7 +69,6 @@ def create_retriever(username: str = Form(..., description="Nombre de usuario"),
                 collection_metadata = {
                     "id": research_id,
                     "name_research": username,
-                    "description": research.name,
                     "author": user.name,
                 }
             )
@@ -134,12 +133,12 @@ def query_retriever(username: str = Form(..., description="Nombre de usuario"),
         
         try:
             search_type="similarity"
-            search_kwargs={'k': 1500, 'score_threshold': 0.65}
+            search_kwargs={'k': 5, 'score_threshold': 0.65}
             retriever = SimpleRetriever(vectorstore=vs,
                             search_type=search_type,
                             search_kwargs=search_kwargs
                             )
-            query = research.description
+            query = research.title
             print(query)
             results = retriever.invoke(query)
             logger.info(f"Total results found Abstract Retriever: {len(results)}")
