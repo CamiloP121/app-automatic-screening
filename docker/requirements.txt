@@ -8,7 +8,7 @@ ipython==7.34.0
 pydantic_settings==2.6.1
 SQLAlchemy==2.0.35
 pydantic_settings==2.6.1
-thinc==8.2.5
+thinc==8.3.4
 joblib
 psycopg2==2.9.10
 pandas==2.2.2
@@ -22,3 +22,8 @@ langchain-openai==0.3.30
 langchain-postgres==0.0.15
 psycopg[binary,pool]==3.2.9
 langchain-huggingface==0.3.1
+scikit-learn==1.7.2
+matplotlib==3.10.7
+seaborn==0.13.2
+spacy==3.8.7
+datasets==4.3.0
