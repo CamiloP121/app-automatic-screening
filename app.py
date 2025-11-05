@@ -14,7 +14,8 @@ from modules.routes import (app_user, # User
                             app_research, # Research management
                             app_loader, # Data loader
                             app_retriever, # Retriever management
-                            app_labeler  # Labeler management
+                            app_labeler,  # Labeler management
+                            app_ml  # ML management
                     )
 
 print("||||| start configuration ai_app |||||")
@@ -46,6 +47,7 @@ app.include_router(app_research, prefix="/research", tags=["Research Management"
 app.include_router(app_loader, prefix="/data", tags=["Data Loading"])
 app.include_router(app_retriever, prefix="/retriever", tags=["Retriever"])
 app.include_router(app_labeler, prefix="/labeler", tags=["Labeler"])
+app.include_router(app_ml, prefix="/classifier", tags=["Classifier"])
 
 # Database
 db.base.metadata.create_all(bind = db.engine)
