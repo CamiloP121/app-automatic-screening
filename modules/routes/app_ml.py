@@ -14,7 +14,7 @@ import pickle
 # Async
 import asyncio
 # Db
-from modules.models import db, Users, Research, Articles, Train, MlClassifier
+from modules.models import db, Users, Research, Articles, TrainedModel, MlClassifier
 # Own
 from app import logger
 from modules.Utils.load_helpers import saveFAPIFile
@@ -103,7 +103,7 @@ async def load_as(username: str = Form(..., description="Nombre de usuario que r
             X = np.stack(dataset['abstract_vectorized'])
             y = np.array(dataset['label'])
 
-            y_encoded = label_encoder.fit_transform(y)
+            # y_encoded = label_encoder.fit_transform(y)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
                                                                             stratify= y,
                                                                             random_state=42)
@@ -135,7 +135,7 @@ async def load_as(username: str = Form(..., description="Nombre de usuario que r
             model_base64 = base64.b64encode(model_bytes).decode('utf-8')
 
             train_record = {
-                "id": Train.generate_id(),  # o usa tu generador de id único
+                "id": TrainedModel.generate_id(),  # o usa tu generador de id único
                 "description": "Modelo Logistic Regression entrenado para investigación",
                 "accuracy": score_all["accuracy"],  # valor float
                 "recall": score_all["recall"],      # valor float
@@ -175,7 +175,7 @@ async def load_as(username: str = Form(..., description="Nombre de usuario que r
 )
 def get_trained_models(research_id: str):
     try:
-        models = db.session.query(Train).filter(Train.ResearchOwnerId == research_id).all()
+        models = TrainedModel.get_by_research(research_id)
         return {"trained_models": models}
     except Exception as e:
         logger.error(f"Error al obtener modelos entrenados: {str(e)}")
@@ -188,7 +188,7 @@ def get_trained_models(research_id: str):
 )
 def get_trained_model(model_id: str):
     try:
-        model = Train.get_id(model_id)
+        model = TrainedModel.get_id(model_id)
         if not model:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Modelo entrenado no encontrado.")
         return model
@@ -205,7 +205,7 @@ def get_trained_model(model_id: str):
 )
 def get_latest_trained_model(research_id: str):
     try:
-        model = db.session.query(Train).filter(Train.ResearchOwnerId == research_id).order_by(Train.create_at.desc()).first()
+        model = TrainedModel.get_latest_by_research(research_id)
         if not model:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Modelo entrenado no encontrado.")
         return model
@@ -214,7 +214,7 @@ def get_latest_trained_model(research_id: str):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno del servidor.")
     
 @app_ml.post(
-    "/execute_inference/{model_id}",
+    "/execute_inference",
     summary="Ejecutar inferencia con un modelo entrenado", 
     description="Este endpoint permite ejecutar inferencias utilizando un modelo entrenado específico dado su ID",
 )
@@ -232,7 +232,7 @@ def execute_inference(username : str = Form(..., description="Nombre de usuario 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene permisos para cargar datos.")
   
     # Verificar que el modelo existe
-    model_details = Train.get_id(model_id)
+    model_details = TrainedModel.get_id(model_id)
     if not model_details:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Modelo entrenado no encontrado.")
     if not model_details.is_active:
