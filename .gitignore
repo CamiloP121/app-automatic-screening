@@ -41,5 +41,3 @@ storage_faiss/
 store/
 
 storage/
-
-*.ipynb
