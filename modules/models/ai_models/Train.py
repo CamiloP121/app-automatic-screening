@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Text, Float
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Text, Float, func
 from datetime import datetime
 from sqlalchemy.orm import relationship
 from .. import db
@@ -27,20 +27,19 @@ class TrainedModel(db.base):
     ml_classifiers = relationship("MlClassifier", back_populates="ModelOwner")
 
     # Bases de datos
-    classmethod
+    @classmethod
     def add(cls, dict_new):
-        """Agrega un nuevo Research a la base de datos."""
+        """Agrega un nuevo registro TrainedModel a la base de datos."""
         try:
-            version = cls.generate_version(dict_new["ResearchOwnerId"])
-            dict_new["version"] = version
-            new_research = cls(**dict_new)
-            db.session.add(new_research)
+            new_label = cls(**dict_new)
+            new_label.version = cls.generate_version(dict_new['ResearchOwnerId'])
+            db.session.add(new_label)
             # db.session.commit()
-            return new_research
+            return new_label
         except Exception as e:
             print("Error ", e)
             # db.session.rollback()
-            raise Exception("Error adding Research")
+            raise Exception("Error adding TrainedModel")
 
     @classmethod
     def update(cls, id, dict_update):
@@ -75,7 +74,7 @@ class TrainedModel(db.base):
     def generate_version(cls, research_id):
         """Genera la siguiente versión para un modelo entrenado en una investigación dada."""
         try:
-            max_version = db.session.query(db.func.max(cls.version)).filter_by(ResearchOwnerId=research_id).scalar()
+            max_version = db.session.query(func.max(cls.version)).filter_by(ResearchOwnerId=research_id).scalar()
             if max_version is None:
                 return 1
             return max_version + 1

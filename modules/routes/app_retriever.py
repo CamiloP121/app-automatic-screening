@@ -133,7 +133,7 @@ def query_retriever(username: str = Form(..., description="Nombre de usuario"),
         
         try:
             search_type="similarity"
-            search_kwargs={'k': 5, 'score_threshold': 0.65}
+            search_kwargs={'k': 1200, 'score_threshold': 0.65}
             retriever = SimpleRetriever(vectorstore=vs,
                             search_type=search_type,
                             search_kwargs=search_kwargs

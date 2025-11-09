@@ -116,39 +116,50 @@ async def load_as(username: str = Form(..., description="Nombre de usuario que r
             logger.info("Starting GridSearch for Logistic Regression model...")
             model_lg.search_kfold(X_train, y_train, n_splits=5, scoring='recall_macro')
             logger.info("GridSearch completed.")
-            
-            logger.info("Mejores hiperparámetros:", model_lg.grid_search.best_params_)
+
+            logger.info(f"Mejores hiperparámetros: {model_lg.grid_search.best_params_}")
             model_lg.train(X_train, y_train)
             logger.info("Modelo entrenado.")
             end = time.time()
 
             y_pred = model_lg.predict(X_test)
             score_all = model_lg.get_scores(y_test, y_pred["labels"])
-            logger.info("Metrics:", score_all)
+            logger.info(f"Metrics: {score_all}")
 
             #temp_results_all = pd.DataFrame([score_all])
             #temp_results_all['hyper_params'] = [str(model_lg.grid_search.best_params_)]
             #temp_results_all['exec_time'] = [round(end - start, 2)]
 
-            # Guardar resultados finales
-            model_bytes = pickle.dumps(model_lg)
+            # Convertir las métricas a string JSON
+            # metrics_json = json.dumps(score_all)  # {'accuracy': 0.938, 'recall': 0.892, 'f1-score': 0.902}
+            hyperparams_json = json.dumps(model_lg.grid_search.best_params_)
+
+            # Serializar el modelo
+            model_and_vectorizer = {
+                'model': model_lg,
+                'vectorizer': vectorizer_model
+            }
+
+            # Serializar el conjunto
+            model_bytes = pickle.dumps(model_and_vectorizer)
             model_base64 = base64.b64encode(model_bytes).decode('utf-8')
 
+            # Crear el diccionario correctamente
             train_record = {
-                "id": TrainedModel.generate_id(),  # o usa tu generador de id único
+                "id": TrainedModel.generate_unique_id(),
                 "description": "Modelo Logistic Regression entrenado para investigación",
-                "accuracy": score_all["accuracy"],  # valor float
-                "recall": score_all["recall"],      # valor float
-                "f1_score": score_all["f1_score"],  # valor float
-                "hyperparameters": json.dumps(model_lg.grid_search.best_params_),  # string JSON
-                "time_training": round(end - start, 3),  # segundos
-                "model_data": model_base64,    # modelo serializado en base64
-                "create_at": datetime.now() ,
-                "update_at": datetime.now() ,
+                "accuracy": float(score_all["accuracy"]),
+                "recall": float(score_all["recall"]),  
+                "f1_score": float(score_all["f1-score"]),
+                "hyperparameters": hyperparams_json,  # Asegúrate de que sea JSON string
+                "time_training": round(float(end - start), 3),
+                "model_data": model_base64,
+                "create_at": datetime.now(),
+                "update_at": datetime.now(),
                 "ResearchOwnerId": research.id
             }
 
-            db.session.add(train_record)
+            TrainedModel.add(dict_new = train_record)
             db.session.commit()
 
             return {
@@ -235,14 +246,16 @@ def execute_inference(username : str = Form(..., description="Nombre de usuario 
     model_details = TrainedModel.get_id(model_id)
     if not model_details:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Modelo entrenado no encontrado.")
-    if not model_details.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El modelo está inactivo. No se pueden cargar datos.")
     
     try:
         try:
             # Cargar Modelo
+            # Cargar modelo + vectorizer
             model_data_bytes = base64.b64decode(model_details.model_data)
-            model = pickle.loads(model_data_bytes)
+            model_and_vectorizer = pickle.loads(model_data_bytes)
+            
+            model = model_and_vectorizer['model']
+            vectorizer = model_and_vectorizer['vectorizer']
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al cargar el modelo: {str(e)}")
         
@@ -251,7 +264,7 @@ def execute_inference(username : str = Form(..., description="Nombre de usuario 
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artículo no encontrado.")
         
-        input_data = vectorizer_model.transform([article.abstract], flag_lematized=True)
+        input_data = vectorizer.transform([article.abstract], flag_lematized=True)
         input_data = input_data.toarray()
         flag_complete = False
         try:

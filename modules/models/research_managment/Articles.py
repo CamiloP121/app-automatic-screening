@@ -25,8 +25,8 @@ class Articles(db.base):
     articleOwnerId = Column(String, ForeignKey("datasets.id"))
     articleOwner = relationship("Datasets", back_populates="articles")
     # Relacion con predicciones ML y AI
-    ai_labelers = relationship("AiLabeler", back_populates="ResearchOwner")
-    ml_classifiers = relationship("MlClassifier", back_populates="ResearchOwner")
+    ai_labelers = relationship("AiLabeler", back_populates="ArticleOwner")
+    ml_classifiers = relationship("MlClassifier", back_populates="ArticleOwner")
 
     @classmethod
     def add(cls, dict_new):

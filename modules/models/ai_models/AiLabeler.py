@@ -92,8 +92,18 @@ class AiLabeler(db.base):
         df_articles = [Articles.get_all_by_dataset(dataset_id) for dataset_id in dataset_ids]
         if not df_articles:
             return []
-        article_ids = [article['id'] for df in df_articles for article in df]
-        resultados = db.session.query(cls).filter(cls.ArticleOwnerId.in_(article_ids)).all()
+        # Crear un diccionario de mapeo para acceso rápido a abstract
+        abstracts_map = {}
+        for df in df_articles:
+            for _, row in df.iterrows():
+                abstracts_map[row['id']] = row['abstract']
+
+        # Obtener los IDs y hacer la consulta
+        article_ids = []
+        for df in df_articles:
+            article_ids.extend(df['id'].tolist())
+
+        resultados = db.session.query(cls).filter(cls.id_article.in_(article_ids)).all()
         items = []
         for r in resultados:
             items.append({
@@ -105,6 +115,7 @@ class AiLabeler(db.base):
                 "tokens_total": r.tokens_total,
                 "flag_complete": r.flag_complete,
                 "create_at": r.create_at,
-                "update_at": r.update_at
+                "update_at": r.update_at,
+                "abstract": abstracts_map.get(r.id_article, "")  # Agregar abstract
             })
         return items

@@ -47,7 +47,7 @@ def labeler(username: str = Form(..., description="Nombre de usuario"),
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Artículo con ID {article_id} no encontrado.")
 
-        response = AiLabeler.get_prediction_reasoning(article.id, research.id)
+        response = AiLabeler.get_prediction_reasoning(article.id)
         if response:
             logger.info(f"Artículo {article_id} ya etiquetado previamente.")
         
@@ -66,7 +66,6 @@ def labeler(username: str = Form(..., description="Nombre de usuario"),
                     "prompt_input": prompt,
                     "prediction": prediction,
                     "reasoning": reasoning,
-                    "ResearchOwnerId": research.id,
                     "tokens_input": input_tokens,
                     "tokens_output": output_tokens,
                     "tokens_total": total_tokens,
