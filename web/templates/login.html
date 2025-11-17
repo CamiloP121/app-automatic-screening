@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Login - App Automatic Screening{% endblock %}
+
+{% block content %}
+<div class="card card-custom">
+    <div class="card-body p-5">
+        <div class="text-center mb-4">
+            <i class="fas fa-robot fa-3x text-primary mb-3"></i>
+            <h2 class="logo-text">App Automatic Screening</h2>
+            <p class="text-muted" data-translate="login.subtitle">Sign in to your account</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <form id="loginForm">
+            <div class="mb-3">
+                <label for="username" class="form-label">
+                    <i class="fas fa-user me-2"></i><span data-translate="login.username">Username</span>
+                </label>
+                <input type="text" class="form-control form-control-custom" id="username" name="username" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock me-2"></i><span data-translate="login.password">Password</span>
+                </label>
+                <input type="password" class="form-control form-control-custom" id="password" name="password" required>
+            </div>
+
+            <div class="d-grid gap-2 mb-3">
+                <button type="submit" class="btn btn-primary btn-custom">
+                    <i class="fas fa-sign-in-alt me-2"></i><span data-translate="login.signin">Sign In</span>
+                </button>
+            </div>
+
+            <div class="text-center">
+                <p class="mb-0"><span data-translate="login.noAccount">Don't have an account?</span> 
+                    <a href="/register" class="text-decoration-none" data-translate="login.signupHere">Sign up here</a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/auth.js"></script>
+{% endblock %}

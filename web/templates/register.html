@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Register - App Automatic Screening{% endblock %}
+
+{% block content %}
+<div class="card card-custom">
+    <div class="card-body p-5">
+        <div class="text-center mb-4">
+            <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+            <h2 class="logo-text" data-translate="register.title">Create Account</h2>
+            <p class="text-muted" data-translate="register.subtitle">Sign up to access the system</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <form id="registerForm">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">
+                        <i class="fas fa-user me-2"></i><span data-translate="register.username">Username</span> *
+                    </label>
+                    <input type="text" class="form-control form-control-custom" id="username" name="username" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="name" class="form-label">
+                        <i class="fas fa-id-card me-2"></i><span data-translate="register.name">Name</span> *
+                    </label>
+                    <input type="text" class="form-control form-control-custom" id="name" name="name" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">
+                    <i class="fas fa-envelope me-2"></i><span data-translate="register.email">Email Address</span> *
+                </label>
+                <input type="email" class="form-control form-control-custom" id="email" name="email" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock me-2"></i><span data-translate="register.password">Password</span> *
+                </label>
+                <input type="password" class="form-control form-control-custom" id="password" name="password" required minlength="4">
+            </div>
+
+            <div class="mb-3">
+                <label for="institution" class="form-label">
+                    <i class="fas fa-building me-2"></i><span data-translate="register.institution">Institution</span> *
+                </label>
+                <input type="text" class="form-control form-control-custom" id="institution" name="institution" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="role" class="form-label">
+                    <i class="fas fa-user-tag me-2"></i><span data-translate="register.role">Role</span>
+                </label>
+                <select class="form-control form-control-custom" id="role" name="role">
+                    <option value="researcher" data-translate="register.roleResearcher">Researcher</option>
+                    <option value="viewer" data-translate="register.roleViewer">Viewer</option>
+                </select>
+            </div>
+
+            <div class="d-grid gap-2 mb-3">
+                <button type="submit" class="btn btn-primary btn-custom">
+                    <i class="fas fa-user-plus me-2"></i><span data-translate="register.createAccount">Create Account</span>
+                </button>
+            </div>
+
+            <div class="text-center">
+                <p class="mb-0"><span data-translate="register.hasAccount">Already have an account?</span> 
+                    <a href="/login" class="text-decoration-none" data-translate="register.signinHere">Sign in here</a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/auth.js"></script>
+{% endblock %}

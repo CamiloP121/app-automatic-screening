@@ -1,0 +1,412 @@
+/* Estilos personalizados para la aplicación */
+
+/* Variables CSS */
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --gradient-primary: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    --shadow-soft: 0 10px 30px rgba(0,0,0,0.1);
+    --border-radius: 10px;
+    --border-radius-lg: 15px;
+    --transition: all 0.3s ease;
+}
+
+/* Gradientes y fondos */
+.gradient-bg {
+    background: var(--gradient-primary);
+    min-height: 100vh;
+}
+
+.gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: bold;
+}
+
+/* Cards personalizados */
+.card-custom {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-soft);
+    transition: var(--transition);
+}
+
+.card-custom:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+/* Botones personalizados */
+.btn-custom {
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: 25px;
+    padding: 12px 30px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-outline-custom {
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 25px;
+    padding: 10px 25px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn-outline-custom:hover {
+    background: var(--gradient-primary);
+    border-color: transparent;
+    color: white;
+}
+
+/* Formularios personalizados */
+.form-control-custom {
+    border-radius: var(--border-radius);
+    border: 2px solid #e9ecef;
+    padding: 12px 15px;
+    transition: var(--transition);
+    font-size: 14px;
+}
+
+.form-control-custom:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--dark-color);
+    margin-bottom: 8px;
+}
+
+/* Navegación */
+.nav-link {
+    border-radius: var(--border-radius);
+    margin-bottom: 5px;
+    transition: var(--transition);
+    color: #6c757d;
+}
+
+.nav-link:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
+}
+
+.nav-link.active {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+/* Tablas mejoradas */
+.table-custom {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+}
+
+.table-custom thead th {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    font-weight: 500;
+    padding: 15px;
+}
+
+.table-custom tbody tr {
+    transition: var(--transition);
+}
+
+.table-custom tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+.table-custom tbody td {
+    padding: 12px 15px;
+    border-color: #f1f3f4;
+    vertical-align: middle;
+}
+
+/* Badges mejorados */
+.badge-custom {
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+/* Alertas personalizadas */
+.alert-custom {
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 15px 20px;
+    margin-bottom: 20px;
+}
+
+.alert-success-custom {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+}
+
+.alert-error-custom {
+    background: linear-gradient(135deg, #f8d7da, #f1b0b7);
+    color: #721c24;
+}
+
+.alert-warning-custom {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+}
+
+.alert-info-custom {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Iconos */
+.icon-lg {
+    font-size: 2.5rem;
+}
+
+.icon-xl {
+    font-size: 3.5rem;
+}
+
+/* Estadísticas del dashboard */
+.stat-card {
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: var(--border-radius-lg);
+    padding: 25px;
+    text-align: center;
+    transition: var(--transition);
+    border: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+}
+
+.stat-card .stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    opacity: 0.9;
+}
+
+.stat-card .stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-card .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Sidebar personalizado */
+.sidebar-custom {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-soft);
+    height: calc(100vh - 40px);
+    position: sticky;
+    top: 20px;
+}
+
+.sidebar-brand {
+    text-align: center;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 20px;
+}
+
+.sidebar-brand .brand-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.sidebar-brand .brand-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-custom {
+        margin: 10px;
+        border-radius: var(--border-radius);
+    }
+    
+    .stat-card {
+        margin-bottom: 15px;
+    }
+    
+    .sidebar-custom {
+        height: auto;
+        position: relative;
+        margin-bottom: 20px;
+    }
+}
+
+/* Notificaciones personalizadas */
+#notification-container .alert {
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(10px);
+}
+
+/* Modales mejorados */
+.modal-content {
+    border: none;
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    background: var(--gradient-primary);
+    color: white;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    border-bottom: none;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+/* Utilidades adicionales */
+.text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.border-custom {
+    border: 2px solid var(--primary-color) !important;
+}
+
+.shadow-custom {
+    box-shadow: var(--shadow-soft) !important;
+}
+
+/* Estados de elementos */
+.disabled-overlay {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.disabled-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.7);
+    z-index: 1000;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gradient-primary);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
