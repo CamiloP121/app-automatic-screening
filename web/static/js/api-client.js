@@ -2,9 +2,19 @@
  * Clase principal para manejar la API del sistema
  */
 class APIClient {
-    constructor(baseURL = '') {
-        this.baseURL = baseURL;
+    constructor(baseURL = null) {
+        this.baseURL = baseURL || this.getDefaultBaseURL();
         this.currentUser = this.getCurrentUser();
+    }
+
+    getDefaultBaseURL() {
+        const { hostname, port, protocol } = window.location;
+        
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return `${protocol}//${hostname}:5010`;
+        }
+        
+        return window.location.origin;
     }
 
     /**
