@@ -15,8 +15,10 @@ from modules.routes import (app_user, # User
                             app_loader, # Data loader
                             app_retriever, # Retriever management
                             app_labeler,  # Labeler management
-                            app_ml  # ML management
+                            app_ml,  # ML management
+                            app_web  # Web interface
                     )
+from modules.routes.app_web import mount_static_files
 
 print("||||| start configuration ai_app |||||")
 
@@ -30,8 +32,11 @@ app = FastAPI(
     description="""
     Aplicación screening automático NLP
     """,
-    version="0.0.1"
+    version="0.0.2"
 )
+
+# Configurar archivos estáticos
+mount_static_files(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,6 +47,7 @@ app.add_middleware(
 )
 
 # Routes
+app.include_router(app_web, prefix="", tags=["Web Interface"])
 app.include_router(app_user, prefix="/user", tags=["Users"])
 app.include_router(app_research, prefix="/research", tags=["Research Management"])
 app.include_router(app_loader, prefix="/data", tags=["Data Loading"])
