@@ -9,6 +9,7 @@ class Dashboard {
         this.currentView = 'list'; // 'list' or 'detail'
         this.selectedResearch = null;
         this.currentUser = null;
+        this.userInfo = null;
         this.init();
     }
 
@@ -26,8 +27,30 @@ class Dashboard {
         // Setup event listeners
         this.setupEventListeners();
         
+        // Load user info and welcome message
+        this.loadUserInfo();
+        
         // Load researches
         this.loadResearches();
+    }
+
+    async loadUserInfo() {
+        try {
+            this.userInfo = await this.apiClient.getUserInfo(this.currentUser);
+            
+            // Update welcome message
+            const welcomeElement = document.getElementById('welcomeMessage');
+            if (welcomeElement && this.userInfo.name) {
+                welcomeElement.textContent = `Bienvenido ${this.userInfo.name}`;
+            }
+        } catch (error) {
+            console.error('Error loading user info:', error);
+            // Si falla, mostrar solo el username
+            const welcomeElement = document.getElementById('welcomeMessage');
+            if (welcomeElement) {
+                welcomeElement.textContent = `Bienvenido ${this.currentUser}`;
+            }
+        }
     }
 
     setupEventListeners() {
@@ -56,6 +79,25 @@ class Dashboard {
         document.getElementById('backToListBtn').addEventListener('click', () => {
             this.showResearchList();
         });
+
+        // Profile form handlers
+        document.getElementById('userInfoForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.updateUserInfo();
+        });
+
+        document.getElementById('changePasswordForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.changePassword();
+        });
+
+        document.getElementById('cancelUserInfoBtn').addEventListener('click', () => {
+            this.loadProfileData();
+        });
+
+        document.getElementById('cancelPasswordBtn').addEventListener('click', () => {
+            document.getElementById('changePasswordForm').reset();
+        });
     }
 
     switchView(viewName) {
@@ -72,6 +114,11 @@ class Dashboard {
         // If switching to summary, ensure we're showing the list view
         if (viewName === 'summary') {
             this.showResearchList();
+        }
+        
+        // If switching to profile, load profile data
+        if (viewName === 'profile') {
+            this.loadProfileData();
         }
     }
 
@@ -304,6 +351,108 @@ class Dashboard {
     logout() {
         if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
             this.apiClient.logout();
+        }
+    }
+
+    async loadProfileData() {
+        const loadingState = document.getElementById('profileLoadingState');
+        const profileContent = document.getElementById('profileContent');
+
+        try {
+            loadingState.style.display = 'block';
+            profileContent.style.display = 'none';
+
+            // Load user info if not already loaded
+            if (!this.userInfo) {
+                this.userInfo = await this.apiClient.getUserInfo(this.currentUser);
+            }
+
+            // Populate form fields
+            document.getElementById('profileUsername').value = this.userInfo.username || '';
+            document.getElementById('profileEmail').value = this.userInfo.email || '';
+            document.getElementById('profileName').value = this.userInfo.name || '';
+            document.getElementById('profileInstitution').value = this.userInfo.institution || '';
+            document.getElementById('profileRole').value = this.userInfo.role || '';
+            document.getElementById('profileStatus').value = this.userInfo.is_active ? 'Activo' : 'Inactivo';
+
+            // Format dates
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            document.getElementById('profileCreatedAt').textContent = formatDate(this.userInfo.created_at);
+            document.getElementById('profileUpdatedAt').textContent = formatDate(this.userInfo.updated_at);
+            document.getElementById('profileLastLogin').textContent = formatDate(this.userInfo.last_login);
+
+            loadingState.style.display = 'none';
+            profileContent.style.display = 'block';
+
+        } catch (error) {
+            loadingState.style.display = 'none';
+            console.error('Error loading profile data:', error);
+            this.showError('Error al cargar la información del perfil: ' + error.message);
+        }
+    }
+
+    async updateUserInfo() {
+        try {
+            const userData = {
+                name: document.getElementById('profileName').value,
+                email: document.getElementById('profileEmail').value,
+                institution: document.getElementById('profileInstitution').value
+            };
+
+            await this.apiClient.updateUser(this.currentUser, userData);
+            
+            // Reload user info
+            this.userInfo = null;
+            await this.loadUserInfo();
+            await this.loadProfileData();
+
+            this.showSuccess('Información actualizada correctamente');
+
+        } catch (error) {
+            console.error('Error updating user info:', error);
+            this.showError('Error al actualizar la información: ' + error.message);
+        }
+    }
+
+    async changePassword() {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        // Validate passwords match
+        if (newPassword !== confirmPassword) {
+            this.showError('Las contraseñas no coinciden');
+            return;
+        }
+
+        // Validate password length
+        if (newPassword.length < 6) {
+            this.showError('La contraseña debe tener al menos 6 caracteres');
+            return;
+        }
+
+        try {
+            await this.apiClient.updatePassword(this.currentUser, currentPassword, newPassword);
+            
+            // Clear form
+            document.getElementById('changePasswordForm').reset();
+            
+            this.showSuccess('Contraseña actualizada correctamente');
+
+        } catch (error) {
+            console.error('Error changing password:', error);
+            this.showError('Error al cambiar la contraseña: ' + error.message);
         }
     }
 

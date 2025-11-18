@@ -303,6 +303,7 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h4><i class="fas fa-microscope"></i> Screening App</h4>
+                <p class="mb-0 mt-2" id="welcomeMessage" style="font-size: 0.9rem; opacity: 0.9;">Bienvenido</p>
             </div>
             <div class="sidebar-menu">
                 <a href="#" class="menu-item active" data-view="summary">
@@ -385,8 +386,105 @@
                     <div class="page-header">
                         <h2><i class="fas fa-user-edit"></i> Modificar Perfil</h2>
                     </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> Funcionalidad de modificación de perfil en desarrollo
+                    
+                    <!-- Loading State -->
+                    <div id="profileLoadingState" class="loading" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-3">Cargando información del perfil...</p>
+                    </div>
+
+                    <!-- Profile Content -->
+                    <div id="profileContent" style="display: none;">
+                        <!-- User Information Form -->
+                        <div class="card mb-4">
+                            <div class="card-header" style="background-color: #f8f9fa; border-bottom: 2px solid #667eea;">
+                                <h5 class="mb-0" style="color: #333;"><i class="fas fa-user"></i> Información Personal</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="userInfoForm">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="profileUsername" class="form-label">Nombre de Usuario</label>
+                                            <input type="text" class="form-control" id="profileUsername" readonly>
+                                            <small class="text-muted">El nombre de usuario no se puede modificar</small>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="profileEmail" class="form-label">Correo Electrónico</label>
+                                            <input type="email" class="form-control" id="profileEmail" required>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="profileName" class="form-label">Nombre Completo</label>
+                                            <input type="text" class="form-control" id="profileName" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="profileInstitution" class="form-label">Institución</label>
+                                            <input type="text" class="form-control" id="profileInstitution">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="profileRole" class="form-label">Rol</label>
+                                            <input type="text" class="form-control" id="profileRole" readonly>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="profileStatus" class="form-label">Estado</label>
+                                            <input type="text" class="form-control" id="profileStatus" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> Cuenta creada: <span id="profileCreatedAt"></span><br>
+                                            <i class="fas fa-sync"></i> Última actualización: <span id="profileUpdatedAt"></span><br>
+                                            <i class="fas fa-sign-in-alt"></i> Último acceso: <span id="profileLastLogin"></span>
+                                        </small>
+                                    </div>
+                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                        <button type="button" class="btn btn-secondary" id="cancelUserInfoBtn">
+                                            <i class="fas fa-times"></i> Cancelar
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> Guardar Cambios
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Change Password Form -->
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-lock"></i> Cambiar Contraseña</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="changePasswordForm">
+                                    <div class="mb-3">
+                                        <label for="currentPassword" class="form-label">Contraseña Actual</label>
+                                        <input type="password" class="form-control" id="currentPassword" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="newPassword" class="form-label">Nueva Contraseña</label>
+                                        <input type="password" class="form-control" id="newPassword" required minlength="6">
+                                        <small class="text-muted">Mínimo 6 caracteres</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirmPassword" class="form-label">Confirmar Nueva Contraseña</label>
+                                        <input type="password" class="form-control" id="confirmPassword" required minlength="6">
+                                    </div>
+                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                        <button type="button" class="btn btn-secondary" id="cancelPasswordBtn">
+                                            <i class="fas fa-times"></i> Cancelar
+                                        </button>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-key"></i> Cambiar Contraseña
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -82,6 +82,17 @@ class APIClient {
     }
 
     /**
+     * Petición PUT con FormData
+     */
+    async putForm(endpoint, formData) {
+        return this.makeRequest(endpoint, {
+            method: 'PUT',
+            body: formData,
+            headers: {} // Dejar que el browser establezca Content-Type para FormData
+        });
+    }
+
+    /**
      * Upload de archivos
      */
     async uploadFile(endpoint, file, additionalData = {}) {
@@ -121,6 +132,36 @@ class APIClient {
     logout() {
         this.removeCurrentUser();
         window.location.href = '/login';
+    }
+
+    async getUserInfo(username) {
+        const formData = new FormData();
+        formData.append('username', username);
+        
+        return this.postForm('/user/get-user', formData);
+    }
+
+    async updateUser(username, userData) {
+        const formData = new FormData();
+        formData.append('username', username);
+        
+        // Add only the fields that are being updated
+        Object.entries(userData).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+                formData.append(key, value);
+            }
+        });
+        
+        return this.putForm('/user/update', formData);
+    }
+
+    async updatePassword(username, currentPassword, newPassword) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('current_password', currentPassword);
+        formData.append('new_password', newPassword);
+        
+        return this.putForm('/user/update-password', formData);
     }
 
     // === MÉTODOS DE INVESTIGACIÓN ===
