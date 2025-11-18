@@ -98,6 +98,131 @@
 .nav-link {
     border-radius: var(--border-radius);
     margin-bottom: 5px;
+}
+
+/* Dashboard específico */
+.research-table {
+    background: white;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.research-table th {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-weight: 600;
+}
+
+.research-table td {
+    padding: 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.research-row:hover {
+    background-color: var(--light-color);
+    transition: var(--transition);
+}
+
+.research-row {
+    cursor: pointer;
+}
+
+/* Estados de carga */
+.loading-spinner {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    border: 0.25em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Estados vacíos */
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.empty-state i {
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+/* Badges personalizados */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5em 0.75em;
+    border-radius: 0.375rem;
+}
+
+/* Modal personalizado */
+.modal-xl {
+    max-width: 90%;
+}
+
+.modal-content {
+    border-radius: var(--border-radius-lg);
+    border: none;
+    box-shadow: var(--shadow-soft);
+}
+
+.modal-header {
+    background: var(--gradient-primary);
+    color: white;
+    border-bottom: none;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+/* Header del dashboard */
+.card-header {
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+/* Sidebar mejorado */
+.nav-link.active {
+    background: var(--gradient-primary);
+    color: white !important;
+    font-weight: 500;
+}
+
+.nav-link:hover:not(.active) {
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
+}
+
+/* Botón de agregar */
+#addResearchBtn {
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: 20px;
+    font-weight: 500;
+    padding: 8px 16px;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    transition: var(--transition);
+}
+
+#addResearchBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Navegación mejorada */
+.nav-link {
     transition: var(--transition);
     color: #6c757d;
 }

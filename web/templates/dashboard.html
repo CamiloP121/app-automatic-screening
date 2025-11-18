@@ -16,21 +16,15 @@
                     </div>
                     
                     <nav class="nav flex-column">
-                        <a class="nav-link active" href="#" data-tab="overview">
-                            <i class="fas fa-tachometer-alt me-2"></i>Resumen
+                        <a class="nav-link active" href="#" data-tab="resumen">
+                            <i class="fas fa-chart-line me-2"></i>Resumen
                         </a>
-                        <a class="nav-link" href="#" data-tab="research">
-                            <i class="fas fa-search me-2"></i>Investigaciones
-                        </a>
-                        <a class="nav-link" href="#" data-tab="articles">
-                            <i class="fas fa-file-alt me-2"></i>Artículos
-                        </a>
-                        <a class="nav-link" href="#" data-tab="models">
-                            <i class="fas fa-brain me-2"></i>Modelos
+                        <a class="nav-link" href="#" data-tab="perfil">
+                            <i class="fas fa-user-edit me-2"></i>Modificar perfil
                         </a>
                         <hr>
                         <a class="nav-link text-danger" href="#" onclick="logout()">
-                            <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                            <i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión
                         </a>
                     </nav>
                 </div>
@@ -43,104 +37,112 @@
                 <div class="card-header bg-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">Bienvenido, <span id="username"></span></h4>
-                        <div class="text-muted">
-                            <i class="fas fa-clock me-1"></i>
-                            <span id="currentTime"></span>
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-primary btn-sm me-3" id="addResearchBtn">
+                                <i class="fas fa-plus me-1"></i>Nueva Investigación
+                            </button>
+                            <div class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                <span id="currentTime"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="card-body">
-                    <!-- Overview Tab -->
-                    <div id="overview-tab" class="tab-content active">
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
-                                <div class="card bg-primary text-white">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-search fa-2x mb-2"></i>
-                                        <h4 id="researchCount">0</h4>
-                                        <small>Investigaciones</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div class="card bg-success text-white">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-file-alt fa-2x mb-2"></i>
-                                        <h4 id="articlesCount">0</h4>
-                                        <small>Artículos</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div class="card bg-warning text-white">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-tags fa-2x mb-2"></i>
-                                        <h4 id="labeledCount">0</h4>
-                                        <small>Etiquetados</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div class="card bg-info text-white">
-                                    <div class="card-body text-center">
-                                        <i class="fas fa-brain fa-2x mb-2"></i>
-                                        <h4 id="modelsCount">0</h4>
-                                        <small>Modelos</small>
-                                    </div>
-                                </div>
-                            </div>
+                    <!-- Resumen Tab -->
+                    <div id="resumen-tab" class="tab-content active">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Mis Investigaciones</h5>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-md-12">
-                                <h5>Actividad Reciente</h5>
-                                <div class="list-group" id="recentActivity">
-                                    <div class="list-group-item">
-                                        <i class="fas fa-info-circle me-2 text-muted"></i>
-                                        Cargando actividad reciente...
-                                    </div>
-                                </div>
+                        <!-- Loading state -->
+                        <div id="loadingState" class="text-center py-5" style="display: none;">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Cargando...</span>
                             </div>
+                            <p class="text-muted">Cargando investigaciones...</p>
                         </div>
-                    </div>
-                    
-                    <!-- Research Tab -->
-                    <div id="research-tab" class="tab-content" style="display: none;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Mis Investigaciones</h5>
-                            <button class="btn btn-primary btn-sm">
+                        
+                        <!-- Empty state -->
+                        <div id="emptyState" class="text-center py-5" style="display: none;">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5>No hay investigaciones</h5>
+                            <p class="text-muted mb-4">Agrega investigaciones en el botón "+"</p>
+                            <button class="btn btn-primary" onclick="dashboard.showNewResearchModal()">
                                 <i class="fas fa-plus me-1"></i>Nueva Investigación
                             </button>
                         </div>
-                        <div id="researchList">
-                            <p class="text-center text-muted">Cargando investigaciones...</p>
+                        
+                        <!-- Research Table -->
+                        <div id="researchTable" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-hover research-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Título</th>
+                                            <th>Fecha de creación</th>
+                                            <th>Paso</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="researchTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Articles Tab -->
-                    <div id="articles-tab" class="tab-content" style="display: none;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Artículos</h5>
-                            <button class="btn btn-primary btn-sm">
-                                <i class="fas fa-upload me-1"></i>Cargar Artículos
-                            </button>
-                        </div>
-                        <div id="articlesList">
-                            <p class="text-center text-muted">Cargando artículos...</p>
+                    <!-- Perfil Tab -->
+                    <div id="perfil-tab" class="tab-content" style="display: none;">
+                        <h5 class="mb-4">Modificar Perfil</h5>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <form id="profileForm">
+                                    <div class="mb-3">
+                                        <label for="profileName" class="form-label">Nombre</label>
+                                        <input type="text" class="form-control" id="profileName" name="name">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="profileEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="profileEmail" name="email">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="profileUsername" class="form-label">Usuario</label>
+                                        <input type="text" class="form-control" id="profileUsername" name="username" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="profilePassword" class="form-label">Nueva Contraseña (opcional)</label>
+                                        <input type="password" class="form-control" id="profilePassword" name="password">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="profilePasswordConfirm" class="form-label">Confirmar Contraseña</label>
+                                        <input type="password" class="form-control" id="profilePasswordConfirm" name="password_confirm">
+                                    </div>
+                                    <button type="button" class="btn btn-primary" onclick="dashboard.updateProfile()">
+                                        <i class="fas fa-save me-1"></i>Guardar Cambios
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Models Tab -->
-                    <div id="models-tab" class="tab-content" style="display: none;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Modelos Entrenados</h5>
-                            <button class="btn btn-primary btn-sm">
-                                <i class="fas fa-cogs me-1"></i>Entrenar Modelo
-                            </button>
-                        </div>
-                        <div id="modelsList">
-                            <p class="text-center text-muted">Cargando modelos...</p>
+                    <!-- Research Detail Modal -->
+                    <div class="modal fade" id="researchDetailModal" tabindex="-1">
+                        <div class="modal-dialog modal-xl">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Detalles de la Investigación</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body" id="researchDetailBody">
+                                    <!-- Content will be loaded here -->
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    <button type="button" class="btn btn-primary" id="editResearchBtn">Editar Investigación</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
