@@ -310,6 +310,10 @@
                     <i class="fas fa-chart-line"></i>
                     <span>Resumen</span>
                 </a>
+                <a href="#" class="menu-item" data-view="new-research">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Nueva Investigación</span>
+                </a>
                 <a href="#" class="menu-item" data-view="profile">
                     <i class="fas fa-user-edit"></i>
                     <span>Modificar perfil</span>
@@ -484,6 +488,86 @@
                                     </div>
                                 </form>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Research View -->
+                <div id="newResearchView" class="view-content" style="display: none;">
+                    <div class="page-header">
+                        <h2><i class="fas fa-plus-circle"></i> Nueva Investigación</h2>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" style="background-color: #f8f9fa; border-bottom: 2px solid #667eea;">
+                            <h5 class="mb-0" style="color: #333;"><i class="fas fa-clipboard-list"></i> Información de la Investigación</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="newResearchForm">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="researchTitle" class="form-label">Título de la Investigación <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="researchTitle" required>
+                                        <small class="text-muted">Ingrese un título descriptivo para su investigación</small>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="researchType" class="form-label">Tipo de Investigación <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="researchType" required>
+                                            <option value="">Seleccione un tipo</option>
+                                            <option value="Systematic Review">Revisión Sistemática</option>
+                                            <option value="Meta-Analysis">Meta-análisis</option>
+                                            <option value="Scoping Review">Scoping Review</option>
+                                            <option value="Literature Review">Revisión de Literatura</option>
+                                            <option value="Other">Otro</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="researchMethodology" class="form-label">Metodología <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="researchMethodology" required>
+                                            <option value="Partial">Partial</option>
+                                            <option value="Full">Full</option>
+                                        </select>
+                                        <small class="text-muted">Metodología a utilizar para el screening</small>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Criterios de Inclusión <span class="text-danger">*</span></label>
+                                    <div id="criteriaContainer">
+                                        <div class="input-group mb-2 criteria-input-group">
+                                            <input type="text" class="form-control criteria-input" placeholder="Ingrese un criterio de inclusión" required>
+                                            <button class="btn btn-outline-danger btn-remove-criteria" type="button" style="display: none;">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="addCriteriaBtn">
+                                        <i class="fas fa-plus"></i> Agregar Criterio
+                                    </button>
+                                    <small class="text-muted d-block mt-2">Agregue cada criterio de inclusión individualmente</small>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="researchIsTest">
+                                        <label class="form-check-label" for="researchIsTest">
+                                            Investigación de Prueba
+                                        </label>
+                                        <small class="form-text text-muted d-block">Marque si es una investigación de prueba</small>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> <strong>Nota:</strong> Los campos marcados con <span class="text-danger">*</span> son obligatorios.
+                                </div>
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="button" class="btn btn-secondary" id="cancelNewResearchBtn">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Guardar Investigación
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>

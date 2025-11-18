@@ -98,6 +98,29 @@ class Dashboard {
         document.getElementById('cancelPasswordBtn').addEventListener('click', () => {
             document.getElementById('changePasswordForm').reset();
         });
+
+        // New research form handlers
+        document.getElementById('newResearchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveNewResearch();
+        });
+
+        document.getElementById('cancelNewResearchBtn').addEventListener('click', () => {
+            this.switchView('summary');
+        });
+
+        // Add criteria button
+        document.getElementById('addCriteriaBtn').addEventListener('click', () => {
+            this.addCriteriaInput();
+        });
+
+        // Delegate event for remove criteria buttons
+        document.getElementById('criteriaContainer').addEventListener('click', (e) => {
+            if (e.target.closest('.btn-remove-criteria')) {
+                e.target.closest('.criteria-input-group').remove();
+                this.updateRemoveButtons();
+            }
+        });
     }
 
     switchView(viewName) {
@@ -110,6 +133,7 @@ class Dashboard {
         // Show corresponding view
         document.getElementById('summaryView').style.display = viewName === 'summary' ? 'block' : 'none';
         document.getElementById('profileView').style.display = viewName === 'profile' ? 'block' : 'none';
+        document.getElementById('newResearchView').style.display = viewName === 'new-research' ? 'block' : 'none';
 
         // If switching to summary, ensure we're showing the list view
         if (viewName === 'summary') {
@@ -120,6 +144,55 @@ class Dashboard {
         if (viewName === 'profile') {
             this.loadProfileData();
         }
+        
+        // If switching to new research, reset form
+        if (viewName === 'new-research') {
+            this.resetNewResearchForm();
+        }
+    }
+
+    addCriteriaInput() {
+        const container = document.getElementById('criteriaContainer');
+        const inputGroup = document.createElement('div');
+        inputGroup.className = 'input-group mb-2 criteria-input-group';
+        inputGroup.innerHTML = `
+            <input type="text" class="form-control criteria-input" placeholder="Ingrese un criterio de inclusión" required>
+            <button class="btn btn-outline-danger btn-remove-criteria" type="button">
+                <i class="fas fa-minus"></i>
+            </button>
+        `;
+        container.appendChild(inputGroup);
+        this.updateRemoveButtons();
+    }
+
+    updateRemoveButtons() {
+        const container = document.getElementById('criteriaContainer');
+        const inputGroups = container.querySelectorAll('.criteria-input-group');
+        
+        // Show remove button only if there's more than one input
+        inputGroups.forEach((group, index) => {
+            const removeBtn = group.querySelector('.btn-remove-criteria');
+            if (inputGroups.length > 1) {
+                removeBtn.style.display = 'block';
+            } else {
+                removeBtn.style.display = 'none';
+            }
+        });
+    }
+
+    resetNewResearchForm() {
+        document.getElementById('newResearchForm').reset();
+        
+        // Reset criteria inputs to just one
+        const container = document.getElementById('criteriaContainer');
+        container.innerHTML = `
+            <div class="input-group mb-2 criteria-input-group">
+                <input type="text" class="form-control criteria-input" placeholder="Ingrese un criterio de inclusión" required>
+                <button class="btn btn-outline-danger btn-remove-criteria" type="button" style="display: none;">
+                    <i class="fas fa-minus"></i>
+                </button>
+            </div>
+        `;
     }
 
     async loadResearches() {
@@ -344,8 +417,68 @@ class Dashboard {
     }
 
     createNewResearch() {
-        // TODO: Implement create functionality
-        alert('Funcionalidad de creación en desarrollo. Redireccionar a formulario de creación.');
+        this.switchView('new-research');
+    }
+
+    async saveNewResearch() {
+        try {
+            // Get form values
+            const title = document.getElementById('researchTitle').value.trim();
+            const typeResearch = document.getElementById('researchType').value;
+            const methodology = document.getElementById('researchMethodology').value;
+            const isTest = document.getElementById('researchIsTest').checked;
+
+            // Get all criteria inputs
+            const criteriaInputs = document.querySelectorAll('.criteria-input');
+            const criteriaList = [];
+            
+            criteriaInputs.forEach(input => {
+                const value = input.value.trim();
+                if (value) {
+                    criteriaList.push(value);
+                }
+            });
+
+            // Validate required fields
+            if (!title || !typeResearch || !methodology || criteriaList.length === 0) {
+                this.showError('Por favor complete todos los campos obligatorios');
+                return;
+            }
+
+            // Prepare data for API - criteria as comma-separated string
+            const criteriaInclusion = criteriaList.join(',');
+
+            // Create URL encoded form data
+            const formData = new URLSearchParams();
+            formData.append('username', this.currentUser);
+            formData.append('title', title);
+            formData.append('type_research', typeResearch);
+            formData.append('methodology', methodology);
+            formData.append('criteria_inclusion', criteriaInclusion);
+            formData.append('is_active', 'true');
+            formData.append('is_test', isTest.toString());
+
+            const response = await this.apiClient.makeRequest('/research/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData.toString()
+            });
+
+            this.showSuccess(`Investigación "${response.title}" creada exitosamente`);
+            
+            // Reset form and switch to summary view
+            this.resetNewResearchForm();
+            this.switchView('summary');
+            
+            // Reload researches
+            await this.loadResearches();
+
+        } catch (error) {
+            console.error('Error creating research:', error);
+            this.showError('Error al crear la investigación: ' + error.message);
+        }
     }
 
     logout() {
