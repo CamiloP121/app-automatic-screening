@@ -406,7 +406,7 @@
 .sidebar-custom {
     background: white;
     border-radius: var(--border-radius-lg);
-    padding: 20px;
+    padding: 10px;
     box-shadow: var(--shadow-soft);
     height: calc(100vh - 40px);
     position: sticky;

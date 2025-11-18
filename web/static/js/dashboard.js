@@ -1,412 +1,332 @@
 /**
- * Funciones específicas para el dashboard
+ * Dashboard Management
  */
 
 class Dashboard {
     constructor() {
+        this.apiClient = new APIClient();
+        this.currentResearches = [];
+        this.currentView = 'list'; // 'list' or 'detail'
+        this.selectedResearch = null;
         this.currentUser = null;
-        this.activeTab = 'resumen';
-        this.data = {
-            research: [],
-            stats: {}
-        };
-        
         this.init();
     }
 
-    async init() {
-        // Verificar autenticación
-        if (!apiClient.isAuthenticated()) {
+    init() {
+        // Check authentication
+        const username = this.apiClient.getCurrentUser();
+        if (!username) {
             window.location.href = '/login';
             return;
         }
 
-        this.currentUser = apiClient.getCurrentUser();
-        this.setupUI();
-        await this.loadInitialData();
+        // Store username
+        this.currentUser = username;
+
+        // Setup event listeners
         this.setupEventListeners();
+        
+        // Load researches
+        this.loadResearches();
     }
 
-    setupUI() {
-        // Mostrar nombre de usuario
-        const usernameElement = document.getElementById('username');
-        if (usernameElement) {
-            usernameElement.textContent = this.currentUser.name || this.currentUser.username;
+    setupEventListeners() {
+        // Menu items
+        document.querySelectorAll('.menu-item[data-view]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchView(item.dataset.view);
+            });
+        });
+
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.logout();
+        });
+
+        // Add research buttons
+        document.querySelectorAll('.btn-add-research').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.createNewResearch();
+            });
+        });
+
+        // Back to list button
+        document.getElementById('backToListBtn').addEventListener('click', () => {
+            this.showResearchList();
+        });
+    }
+
+    switchView(viewName) {
+        // Update menu active state
+        document.querySelectorAll('.menu-item[data-view]').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`.menu-item[data-view="${viewName}"]`).classList.add('active');
+
+        // Show corresponding view
+        document.getElementById('summaryView').style.display = viewName === 'summary' ? 'block' : 'none';
+        document.getElementById('profileView').style.display = viewName === 'profile' ? 'block' : 'none';
+
+        // If switching to summary, ensure we're showing the list view
+        if (viewName === 'summary') {
+            this.showResearchList();
         }
-
-        // Iniciar reloj
-        this.updateTime();
-        setInterval(() => this.updateTime(), 1000);
     }
 
-    async loadInitialData() {
-        try {
-            await this.loadResearchData();
-            await this.loadTabData(this.activeTab);
-        } catch (error) {
-            console.error('Error loading initial data:', error);
-            notify.error('Error cargando datos iniciales');
-        }
-    }
+    async loadResearches() {
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const tableContainer = document.getElementById('researchTableContainer');
 
-    async loadResearchData() {
         try {
-            // Mostrar estado de carga
-            document.getElementById('loadingState').style.display = 'block';
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('researchTable').style.display = 'none';
+            loadingState.style.display = 'block';
+            emptyState.style.display = 'none';
+            tableContainer.style.display = 'none';
 
-            // Cargar investigaciones del usuario
-            const researchData = await apiClient.getResearchByOwner(this.currentUser.username);
-            
-            this.data.research = [];
-            Object.values(researchData).forEach(researches => {
-                researches.forEach(research => {
-                    this.data.research.push(research);
-                });
+            const formData = new FormData();
+            formData.append('username', this.currentUser);
+
+            const response = await this.apiClient.makeRequest('/research/get-research', {
+                method: 'POST',
+                body: formData,
+                headers: {} // Remove Content-Type to let browser set it with boundary
             });
 
-            // Ocultar estado de carga
-            document.getElementById('loadingState').style.display = 'none';
-
-            if (this.data.research.length === 0) {
-                // Mostrar estado vacío
-                document.getElementById('emptyState').style.display = 'block';
+            // The response.researches is a dictionary with username as key
+            // Extract the array of researches
+            let researchesData = response.researches || {};
+            
+            // Convert dictionary to array
+            if (typeof researchesData === 'object' && !Array.isArray(researchesData)) {
+                // Get all research arrays from the dictionary
+                this.currentResearches = [];
+                Object.values(researchesData).forEach(researchArray => {
+                    if (Array.isArray(researchArray)) {
+                        this.currentResearches.push(...researchArray);
+                    }
+                });
+            } else if (Array.isArray(researchesData)) {
+                this.currentResearches = researchesData;
             } else {
-                // Mostrar tabla con investigaciones
-                document.getElementById('researchTable').style.display = 'block';
+                this.currentResearches = [];
+            }
+            
+            loadingState.style.display = 'none';
+
+            if (this.currentResearches.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                tableContainer.style.display = 'block';
                 this.renderResearchTable();
             }
 
         } catch (error) {
-            console.error('Error loading research data:', error);
-            document.getElementById('loadingState').style.display = 'none';
-            notify.error('Error cargando investigaciones');
+            loadingState.style.display = 'none';
+            console.error('Error loading researches:', error);
+            this.showError('Error al cargar las investigaciones: ' + error.message);
         }
     }
 
     renderResearchTable() {
-        const tableBody = document.getElementById('researchTableBody');
-        if (!tableBody) return;
+        const tbody = document.getElementById('researchTableBody');
+        tbody.innerHTML = '';
 
-        tableBody.innerHTML = '';
-
-        this.data.research.forEach(research => {
+        this.currentResearches.forEach(research => {
             const row = document.createElement('tr');
-            row.className = 'research-row';
-            row.style.cursor = 'pointer';
-            row.onclick = () => this.showResearchDetail(research.id);
-            
-            const formattedDate = new Date(research.created_at).toLocaleDateString('es-ES', {
+            row.dataset.researchId = research.id;
+            row.addEventListener('click', () => this.showResearchDetail(research));
+
+            const createdDate = new Date(research.created_at);
+            const formattedDate = createdDate.toLocaleDateString('es-ES', {
                 year: 'numeric',
-                month: 'short',
+                month: 'long',
                 day: 'numeric'
             });
 
             const statusBadge = research.is_active 
-                ? '<span class="badge bg-success">Activo</span>'
-                : '<span class="badge bg-secondary">Inactivo</span>';
+                ? '<span class="badge badge-active">Activa</span>'
+                : '<span class="badge badge-inactive">Inactiva</span>';
 
             row.innerHTML = `
                 <td>
-                    <div class="fw-medium">${research.title}</div>
-                    <small class="text-muted">${research.type_research}</small>
+                    <strong>${this.escapeHtml(research.title)}</strong>
+                    <br>
+                    <small class="text-muted">${this.escapeHtml(research.type_research)}</small>
                 </td>
                 <td>${formattedDate}</td>
-                <td><span class="badge bg-info">${research.step}</span></td>
+                <td><span class="badge-step badge-active">${this.escapeHtml(research.step || 'N/A')}</span></td>
                 <td>${statusBadge}</td>
             `;
 
-            tableBody.appendChild(row);
+            tbody.appendChild(row);
         });
     }
 
-    setupEventListeners() {
-        // Navegación de tabs
-        document.querySelectorAll('[data-tab]').forEach(link => {
-            link.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const tabName = link.dataset.tab;
-                await this.switchTab(tabName);
+    showResearchDetail(research) {
+        this.selectedResearch = research;
+        this.currentView = 'detail';
+
+        const listView = document.getElementById('researchListView');
+        const detailView = document.getElementById('researchDetailView');
+        const detailContent = document.getElementById('researchDetailContent');
+
+        listView.style.display = 'none';
+        detailView.style.display = 'block';
+
+        // Format dates
+        const createdDate = new Date(research.created_at);
+        const updatedDate = new Date(research.updated_at);
+        
+        const formatDate = (date) => {
+            return date.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
-        });
-
-        // Botón de logout
-        const logoutBtn = document.querySelector('a[onclick="logout()"]');
-        if (logoutBtn) {
-            logoutBtn.onclick = (e) => {
-                e.preventDefault();
-                this.logout();
-            };
-        }
-
-        // Botón agregar investigación
-        const addResearchBtn = document.getElementById('addResearchBtn');
-        if (addResearchBtn) {
-            addResearchBtn.onclick = () => this.showNewResearchModal();
-        }
-    }
-
-    async switchTab(tabName) {
-        // Actualizar UI
-        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-        
-        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-        document.getElementById(`${tabName}-tab`).style.display = 'block';
-        
-        // Cargar datos del tab
-        this.activeTab = tabName;
-        await this.loadTabData(tabName);
-    }
-
-    async loadTabData(tabName) {
-        try {
-            switch (tabName) {
-                case 'resumen':
-                    // Los datos ya están cargados
-                    break;
-                case 'perfil':
-                    this.loadProfileData();
-                    break;
-            }
-        } catch (error) {
-            console.error(`Error loading ${tabName} data:`, error);
-            notify.error(`Error cargando datos de ${tabName}`);
-        }
-    }
-
-    loadProfileData() {
-        // Cargar datos del perfil del usuario
-        if (this.currentUser) {
-            document.getElementById('profileName').value = this.currentUser.name || '';
-            document.getElementById('profileEmail').value = this.currentUser.email || '';
-            document.getElementById('profileUsername').value = this.currentUser.username || '';
-        }
-    }
-
-    async showResearchDetail(researchId) {
-        try {
-            const research = this.data.research.find(r => r.id === researchId);
-            if (!research) {
-                notify.error('Investigación no encontrada');
-                return;
-            }
-
-            const modalBody = document.getElementById('researchDetailBody');
-            
-            // Formatear criterios de inclusión
-            let criteriaHtml = '';
-            if (research.criteria_inclusion && research.criteria_inclusion.length > 0) {
-                criteriaHtml = research.criteria_inclusion.map(criterion => 
-                    `<li class="mb-2">${criterion}</li>`
-                ).join('');
-            }
-
-            modalBody.innerHTML = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="fw-bold text-primary mb-3">Información General</h6>
-                        <table class="table table-borderless">
-                            <tr>
-                                <td class="fw-medium text-muted" style="width: 40%;">Título:</td>
-                                <td>${research.title}</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium text-muted">Tipo:</td>
-                                <td><span class="badge bg-primary">${research.type_research}</span></td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium text-muted">Metodología:</td>
-                                <td><span class="badge bg-info">${research.methodology}</span></td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium text-muted">Estado:</td>
-                                <td>
-                                    ${research.is_active 
-                                        ? '<span class="badge bg-success">Activo</span>' 
-                                        : '<span class="badge bg-secondary">Inactivo</span>'}
-                                    ${research.is_test 
-                                        ? '<span class="badge bg-warning ms-1">Prueba</span>' 
-                                        : ''}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium text-muted">Paso actual:</td>
-                                <td><span class="badge bg-info">${research.step}</span></td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="fw-bold text-primary mb-3">Fechas</h6>
-                        <table class="table table-borderless">
-                            <tr>
-                                <td class="fw-medium text-muted" style="width: 40%;">Creado:</td>
-                                <td>${new Date(research.created_at).toLocaleString('es-ES')}</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium text-muted">Actualizado:</td>
-                                <td>${new Date(research.updated_at).toLocaleString('es-ES')}</td>
-                            </tr>
-                        </table>
-                        
-                        <h6 class="fw-bold text-primary mb-3 mt-4">ID de la Investigación</h6>
-                        <div class="bg-light p-3 rounded">
-                            <small class="font-monospace text-break">${research.id}</small>
-                        </div>
-                    </div>
-                </div>
-                
-                ${criteriaHtml ? `
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h6 class="fw-bold text-primary mb-3">Criterios de Inclusión</h6>
-                            <ul class="list-unstyled">
-                                ${criteriaHtml}
-                            </ul>
-                        </div>
-                    </div>
-                ` : ''}
-            `;
-
-            // Configurar botón de editar
-            const editBtn = document.getElementById('editResearchBtn');
-            editBtn.onclick = () => {
-                this.editResearch(researchId);
-            };
-
-            // Mostrar modal
-            const modal = new bootstrap.Modal(document.getElementById('researchDetailModal'));
-            modal.show();
-
-        } catch (error) {
-            console.error('Error showing research detail:', error);
-            notify.error('Error mostrando detalles de la investigación');
-        }
-    }
-
-    showNewResearchModal() {
-        const modalContent = `
-            <form id="newResearchForm">
-                <div class="mb-3">
-                    <label for="researchTitle" class="form-label">Título de la Investigación</label>
-                    <input type="text" class="form-control" id="researchTitle" name="title" required>
-                </div>
-                <div class="mb-3">
-                    <label for="researchType" class="form-label">Tipo de Investigación</label>
-                    <select class="form-control" id="researchType" name="type_research" required>
-                        <option value="">Seleccionar tipo</option>
-                        <option value="PICO">PICO</option>
-                        <option value="systematic_review">Revisión Sistemática</option>
-                        <option value="meta_analysis">Meta-análisis</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="researchMethodology" class="form-label">Metodología</label>
-                    <select class="form-control" id="researchMethodology" name="methodology">
-                        <option value="Partial">Parcial</option>
-                        <option value="Full">Completa</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="criteriaInclusion" class="form-label">Criterios de Inclusión</label>
-                    <textarea class="form-control" id="criteriaInclusion" name="criteria_inclusion" rows="3" 
-                              placeholder="Separar criterios con |&|"></textarea>
-                </div>
-            </form>
-        `;
-
-        const modal = ModalUtils.create('Nueva Investigación', modalContent, {
-            footerButtons: [
-                { text: 'Cancelar', type: 'secondary', dismiss: true },
-                { text: 'Crear Investigación', type: 'primary' }
-            ]
-        });
-
-        const modalElement = document.querySelector('.modal:last-child');
-        modalElement.querySelector('.btn-primary').onclick = async () => {
-            await this.submitNewResearch(modal);
         };
 
-        modal.show();
-    }
-
-    async submitNewResearch(modal) {
-        const form = document.getElementById('newResearchForm');
-        const { formData, data } = FormUtils.getFormData(form);
-        
-        const errors = FormUtils.validateRequired(form);
-        if (errors.length > 0) {
-            notify.error(errors[0]);
-            return;
+        // Parse criteria inclusion
+        let criteriaHtml = '<p class="text-muted">No hay criterios de inclusión definidos</p>';
+        if (research.criteria_inclusion) {
+            const criteria = research.criteria_inclusion.split('|&|');
+            criteriaHtml = '<ul class="criteria-list">';
+            criteria.forEach(criterion => {
+                criteriaHtml += `<li>${this.escapeHtml(criterion)}</li>`;
+            });
+            criteriaHtml += '</ul>';
         }
 
-        try {
-            data.username = this.currentUser.username;
-            data.is_active = true;
-            data.is_test = false;
+        detailContent.innerHTML = `
+            <div class="detail-header">
+                <h3>${this.escapeHtml(research.title)}</h3>
+                <p class="mb-0">
+                    <span class="badge ${research.is_active ? 'badge-active' : 'badge-inactive'}">
+                        ${research.is_active ? 'Activa' : 'Inactiva'}
+                    </span>
+                    ${research.is_test ? '<span class="badge bg-warning text-dark ms-2">Prueba</span>' : ''}
+                </p>
+            </div>
 
-            const result = await apiClient.createResearch(data);
-            notify.success('Investigación creada exitosamente');
-            modal.hide();
+            <div class="detail-section">
+                <h5><i class="fas fa-info-circle"></i> Información General</h5>
+                <div class="detail-info">
+                    <strong>ID:</strong> ${this.escapeHtml(research.id)}
+                </div>
+                <div class="detail-info">
+                    <strong>Tipo de Investigación:</strong> ${this.escapeHtml(research.type_research)}
+                </div>
+                <div class="detail-info">
+                    <strong>Metodología:</strong> ${this.escapeHtml(research.methodology || 'N/A')}
+                </div>
+                <div class="detail-info">
+                    <strong>Paso Actual:</strong> ${this.escapeHtml(research.step || 'N/A')}
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h5><i class="fas fa-calendar-alt"></i> Fechas</h5>
+                <div class="detail-info">
+                    <strong>Fecha de Creación:</strong> ${formatDate(createdDate)}
+                </div>
+                <div class="detail-info">
+                    <strong>Última Actualización:</strong> ${formatDate(updatedDate)}
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h5><i class="fas fa-list-check"></i> Criterios de Inclusión</h5>
+                ${criteriaHtml}
+            </div>
+
+            <div class="mt-4">
+                <button class="btn btn-primary me-2" onclick="dashboard.editResearch('${research.id}')">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+                <button class="btn btn-${research.is_active ? 'warning' : 'success'}" 
+                        onclick="dashboard.toggleResearchStatus('${research.id}', ${research.is_active})">
+                    <i class="fas fa-${research.is_active ? 'pause' : 'play'}"></i> 
+                    ${research.is_active ? 'Desactivar' : 'Activar'}
+                </button>
+            </div>
+        `;
+    }
+
+    showResearchList() {
+        this.currentView = 'list';
+        document.getElementById('researchListView').style.display = 'block';
+        document.getElementById('researchDetailView').style.display = 'none';
+        this.selectedResearch = null;
+    }
+
+    async toggleResearchStatus(researchId, currentStatus) {
+        try {
+            const formData = new FormData();
+            formData.append('username', this.currentUser);
+            formData.append('research_id', researchId);
+
+            const endpoint = currentStatus ? '/research/inactivate' : '/research/activate';
+
+            await this.apiClient.makeRequest(endpoint, {
+                method: 'POST',
+                body: formData,
+                headers: {}
+            });
+
+            this.showSuccess(`Investigación ${currentStatus ? 'desactivada' : 'activada'} correctamente`);
             
-            // Recargar datos
-            await this.loadResearchData();
-        } catch (error) {
-            notify.error(`Error creando investigación: ${error.message}`);
-        }
-    }
-
-    async updateProfile() {
-        const form = document.getElementById('profileForm');
-        const { data } = FormUtils.getFormData(form);
-        
-        // Validar contraseñas si se proporcionaron
-        if (data.password && data.password !== data.password_confirm) {
-            notify.error('Las contraseñas no coinciden');
-            return;
-        }
-
-        try {
-            // Preparar datos para actualización
-            const updateData = {
-                name: data.name,
-                email: data.email
-            };
-
-            if (data.password) {
-                updateData.password = data.password;
+            // Reload researches and show updated detail
+            await this.loadResearches();
+            const updatedResearch = this.currentResearches.find(r => r.id === researchId);
+            if (updatedResearch) {
+                this.showResearchDetail(updatedResearch);
             }
 
-            // TODO: Implementar API de actualización de perfil
-            notify.info('Funcionalidad de actualización de perfil en desarrollo');
-            
         } catch (error) {
-            notify.error(`Error actualizando perfil: ${error.message}`);
-        }
-    }
-
-    updateTime() {
-        const timeElement = document.getElementById('currentTime');
-        if (timeElement) {
-            timeElement.textContent = new Date().toLocaleTimeString('es-ES');
-        }
-    }
-
-    async logout() {
-        const confirmed = await ModalUtils.confirm('¿Estás seguro de que quieres cerrar sesión?');
-        if (confirmed) {
-            apiClient.logout();
+            console.error('Error toggling research status:', error);
+            this.showError('Error al cambiar el estado: ' + error.message);
         }
     }
 
     editResearch(researchId) {
-        notify.info(`Editar investigación: ${researchId}`);
-        // TODO: Implementar edición
+        // TODO: Implement edit functionality
+        alert('Funcionalidad de edición en desarrollo');
+    }
+
+    createNewResearch() {
+        // TODO: Implement create functionality
+        alert('Funcionalidad de creación en desarrollo. Redireccionar a formulario de creación.');
+    }
+
+    logout() {
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+            this.apiClient.logout();
+        }
+    }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    showError(message) {
+        // Simple alert for now, can be replaced with a better notification system
+        alert('Error: ' + message);
+    }
+
+    showSuccess(message) {
+        // Simple alert for now, can be replaced with a better notification system
+        alert(message);
     }
 }
 
-// Inicializar dashboard cuando el DOM esté listo
+// Initialize dashboard when DOM is ready
+let dashboard;
 document.addEventListener('DOMContentLoaded', () => {
-    window.dashboard = new Dashboard();
+    dashboard = new Dashboard();
 });

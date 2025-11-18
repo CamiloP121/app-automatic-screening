@@ -103,7 +103,9 @@ class APIClient {
         formData.append('password', password);
         
         const result = await this.postForm('/user/login', formData);
-        this.setCurrentUser(result);
+        // Store username in localStorage
+        localStorage.setItem('currentUser', result.username);
+        this.currentUser = result.username;
         return result;
     }
 
@@ -193,27 +195,22 @@ class APIClient {
     // === GESTIÓN DE SESIÓN ===
     
     getCurrentUser() {
-        try {
-            const userData = localStorage.getItem('user');
-            return userData ? JSON.parse(userData) : null;
-        } catch (error) {
-            console.error('Error parsing user data:', error);
-            return null;
-        }
+        const username = localStorage.getItem('currentUser');
+        return username;
     }
 
-    setCurrentUser(userData) {
-        localStorage.setItem('user', JSON.stringify(userData));
-        this.currentUser = userData;
+    setCurrentUser(username) {
+        localStorage.setItem('currentUser', username);
+        this.currentUser = username;
     }
 
     removeCurrentUser() {
-        localStorage.removeItem('user');
+        localStorage.removeItem('currentUser');
         this.currentUser = null;
     }
 
     isAuthenticated() {
-        return this.currentUser !== null;
+        return this.getCurrentUser() !== null;
     }
 
     requireAuthentication() {
@@ -221,7 +218,7 @@ class APIClient {
             window.location.href = '/login';
             throw new Error('Authentication required');
         }
-        return this.currentUser;
+        return this.getCurrentUser();
     }
 }
 
