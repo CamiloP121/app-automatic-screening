@@ -30,7 +30,7 @@ def create_research(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
     if user.role not in ['admin', 'researcher']:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario no tiene permisos para crear investigaciones.")
-    if Research.title_exists(title):
+    if Research.title_exists_by_user(title, username):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El título de la investigación ya existe.")
     # Generar un ID único
     research_id = Research.generate_unique_id()  

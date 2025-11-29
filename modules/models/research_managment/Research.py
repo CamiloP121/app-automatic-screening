@@ -81,6 +81,11 @@ class Research(db.base):
         return db.session.query(cls).filter_by(title=title).first() is not None
 
     @classmethod
+    def title_exists_by_user(cls, title, username):
+        """Verifica si ya existe una investigación con el título dado para un usuario específico."""
+        return db.session.query(cls).filter_by(title=title, researcherOwnerId=username).first() is not None
+
+    @classmethod
     def get_by_owner(cls, username):
         """Devuelve todas las investigaciones cuyo researcherOwnerId coincide con el username dado."""
         resultados = db.session.query(cls).filter_by(researcherOwnerId=username).all()
