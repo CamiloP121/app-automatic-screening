@@ -166,6 +166,58 @@ def labeler_summary(research_id: str):
         "items": items
     }
 
+@app_labeler.get("/results", summary="Obtener artículos etiquetados",
+                 description="Devuelve todos los artículos etiquetados para una investigación con sus predicciones.")
+def get_labeled_results(research_id: str):
+    """Endpoint para obtener los resultados del etiquetado de una investigación."""
+    research = Research.get_id(research_id)
+    if not research:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Investigación no encontrada.")
+    
+    try:
+        items = AiLabeler.get_by_research(research_id)
+        
+        if not items:
+            return {
+                "research_id": research_id,
+                "total_items": 0,
+                "items": [],
+                "statistics": {
+                    "total": 0,
+                    "include": 0,
+                    "exclude": 0,
+                    "not_classified": 0,
+                    "include_percent": 0,
+                    "exclude_percent": 0
+                }
+            }
+        
+        # Calcular estadísticas
+        total_items = len(items)
+        include_count = sum(1 for i in items if i["prediction"] and ("include" in i["prediction"].lower()))
+        exclude_count = sum(1 for i in items if i["prediction"] and ("exclude" in i["prediction"].lower()))
+        not_classified = sum(1 for i in items if not i["flag_complete"])
+        
+        include_percent = round((include_count / total_items) * 100, 2) if total_items > 0 else 0
+        exclude_percent = round((exclude_count / total_items) * 100, 2) if total_items > 0 else 0
+        
+        return {
+            "research_id": research_id,
+            "total_items": total_items,
+            "items": items,
+            "statistics": {
+                "total": total_items,
+                "include": include_count,
+                "exclude": exclude_count,
+                "not_classified": not_classified,
+                "include_percent": include_percent,
+                "exclude_percent": exclude_percent
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error obteniendo resultados del etiquetado: {e}")
+        raise HTTPException(status_code=500, detail=f"Error obteniendo resultados: {str(e)}")
+
 @app_labeler.post("/reprocess", summary="Reprocesar artículos etiquetados",
                   description="Reprocesa artículos para una investigación según el método indicado: 'all' para todos, 'fails' para solo los incompletos.")
 def labeler_reprocess(research_id: str = Form(..., description="ID de la investigación"),

@@ -331,14 +331,24 @@ class Dashboard {
             const datasetsResponse = await this.apiClient.listDatasets(research.id);
             const datasets = datasetsResponse.datasets || [];
 
-            this.renderResearchDetail(fullResearch, datasets);
+            // Load pipeline results if step is not 'Create Research'
+            let pipelineResults = null;
+            if (fullResearch.step !== 'Create Research') {
+                try {
+                    pipelineResults = await this.apiClient.getLabeledResults(research.id);
+                } catch (error) {
+                    console.log('No pipeline results yet');
+                }
+            }
+
+            this.renderResearchDetail(fullResearch, datasets, pipelineResults);
         } catch (error) {
             console.error('Error loading research details:', error);
             this.showNotification('Error al cargar los detalles de la investigación', 'error');
         }
     }
 
-    renderResearchDetail(research, datasets) {
+    renderResearchDetail(research, datasets, pipelineResults = null) {
         const detailContent = document.getElementById('researchDetailContent');
 
         // Format dates
@@ -413,6 +423,8 @@ class Dashboard {
                 <h5><i class="fas fa-list-check"></i> Criterios de Inclusión</h5>
                 ${criteriaHtml}
             </div>
+
+            ${pipelineResults ? this.renderPipelineResultsSection(pipelineResults) : ''}
 
             <div class="detail-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -658,6 +670,171 @@ class Dashboard {
             console.error('Error changing password:', error);
             this.showError('Error al cambiar la contraseña: ' + error.message);
         }
+    }
+
+    renderPipelineResultsSection(results) {
+        const stats = results.statistics || {};
+        const totalItems = stats.total || 0;
+        const includeCount = stats.include || 0;
+        const excludeCount = stats.exclude || 0;
+        const noClassified = stats.not_classified || 0;
+        
+        const includePercent = stats.include_percent || 0;
+        const excludePercent = stats.exclude_percent || 0;
+        
+        // Calculate total tokens
+        const totalTokensInput = results.items.reduce((sum, item) => sum + (item.tokens_input || 0), 0);
+        const totalTokensOutput = results.items.reduce((sum, item) => sum + (item.tokens_output || 0), 0);
+        const totalTokens = totalTokensInput + totalTokensOutput;
+        
+        return `
+            <div class="detail-section pipeline-results-section">
+                <h5><i class="fas fa-chart-pie"></i> Resultados del Pipeline</h5>
+                
+                <div class="results-stats mb-4">
+                    <div class="stat-card stat-total">
+                        <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value">${totalItems}</div>
+                            <div class="stat-label">Total Procesados</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card stat-include">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value">${includeCount}</div>
+                            <div class="stat-label">Incluir (${includePercent}%)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card stat-exclude">
+                        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value">${excludeCount}</div>
+                            <div class="stat-label">Excluir (${excludePercent}%)</div>
+                        </div>
+                    </div>
+                    
+                    ${noClassified > 0 ? `
+                        <div class="stat-card stat-pending">
+                            <div class="stat-icon"><i class="fas fa-question-circle"></i></div>
+                            <div class="stat-info">
+                                <div class="stat-value">${noClassified}</div>
+                                <div class="stat-label">No Clasificados</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="token-usage-info mb-4">
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="fas fa-info-circle me-3" style="font-size: 24px;"></i>
+                        <div>
+                            <strong>Tokens Utilizados:</strong>
+                            <span class="ms-2">Input: ${totalTokensInput.toLocaleString()}</span>
+                            <span class="ms-3">Output: ${totalTokensOutput.toLocaleString()}</span>
+                            <span class="ms-3"><strong>Total: ${totalTokens.toLocaleString()}</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="results-table-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Artículos Etiquetados</h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary active" onclick="dashboard.filterResults('all')">
+                                Todos
+                            </button>
+                            <button type="button" class="btn btn-outline-success" onclick="dashboard.filterResults('include')">
+                                Incluir
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="dashboard.filterResults('exclude')">
+                                Excluir
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width: 60%">Abstract</th>
+                                    <th style="width: 20%">Predicción</th>
+                                    <th style="width: 20%">Confianza</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pipelineResultsTable">
+                                ${this.renderPipelineResultsRows(results.items)}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderPipelineResultsRows(items, filter = 'all') {
+        if (!items || items.length === 0) {
+            return '<tr><td colspan="3" class="text-center text-muted">No hay resultados</td></tr>';
+        }
+        
+        let filteredItems = items;
+        if (filter !== 'all') {
+            filteredItems = items.filter(item => {
+                if (!item.prediction) return false;
+                const pred = item.prediction.toLowerCase();
+                return pred === filter || pred === filter + 'd';
+            });
+        }
+        
+        return filteredItems.map(item => {
+            const prediction = item.prediction ? item.prediction.toLowerCase() : 'n/a';
+            // Handle both 'include'/'included' and 'exclude'/'excluded'
+            const isInclude = prediction.includes('include');
+            const isExclude = prediction.includes('exclude');
+            
+            const badgeClass = isInclude ? 'badge-success' : 
+                              isExclude ? 'badge-danger' : 'badge-secondary';
+            const predictionText = isInclude ? 'Incluir' : 
+                                  isExclude ? 'Excluir' : 'N/A';
+            const filterValue = isInclude ? 'include' : isExclude ? 'exclude' : 'n/a';
+            
+            // Truncate abstract to first 150 characters
+            const abstract = item.abstract || 'Sin abstract';
+            const truncatedAbstract = abstract.length > 150 ? 
+                abstract.substring(0, 150) + '...' : abstract;
+            
+            return `
+                <tr data-filter="${filterValue}">
+                    <td>
+                        <small>${this.escapeHtml(truncatedAbstract)}</small>
+                    </td>
+                    <td>
+                        <span class="badge ${badgeClass}">${predictionText}</span>
+                    </td>
+                    <td>
+                        <small class="text-muted">${item.flag_complete ? 'Completo' : 'Parcial'}</small>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    filterResults(filter) {
+        const buttons = document.querySelectorAll('.results-table-container .btn-group button');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        const rows = document.querySelectorAll('#pipelineResultsTable tr');
+        rows.forEach(row => {
+            if (filter === 'all') {
+                row.style.display = '';
+            } else {
+                const rowFilter = row.getAttribute('data-filter');
+                row.style.display = rowFilter === filter ? '' : 'none';
+            }
+        });
     }
 
     renderDatasetsList(datasets) {

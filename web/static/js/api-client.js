@@ -262,6 +262,10 @@ class APIClient {
         return this.get('/labeler/summary', { research_id: researchId });
     }
 
+    async getLabeledResults(researchId) {
+        return this.get('/labeler/results', { research_id: researchId });
+    }
+
     async updateResearchStep(researchId, step) {
         const formData = new FormData();
         formData.append('username', this.currentUser);
