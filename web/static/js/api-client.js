@@ -231,6 +231,46 @@ class APIClient {
         return this.postForm('/data/load-data', formData);
     }
 
+    // === MÉTODOS DE PIPELINE ===
+
+    async createVectorStore(username, researchId) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('research_id', researchId);
+        
+        return this.postForm('/retriever/create', formData);
+    }
+
+    async queryRetriever(username, researchId) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('research_id', researchId);
+        
+        return this.postForm('/retriever/query', formData);
+    }
+
+    async labelArticle(username, researchId, articleId) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('research_id', researchId);
+        formData.append('article_id', articleId);
+        
+        return this.postForm('/labeler/process', formData);
+    }
+
+    async getLabelingSummary(researchId) {
+        return this.get('/labeler/summary', { research_id: researchId });
+    }
+
+    async updateResearchStep(researchId, step) {
+        const formData = new FormData();
+        formData.append('username', this.currentUser);
+        formData.append('research_id', researchId);
+        formData.append('step', step);
+        
+        return this.postForm('/research/update-step', formData);
+    }
+
     // === MÉTODOS DE DATOS ===
     
     async uploadData(username, researchId, file) {

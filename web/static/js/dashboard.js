@@ -424,6 +424,13 @@ class Dashboard {
                 <div id="datasetsList">
                     ${this.renderDatasetsList(datasets)}
                 </div>
+                ${datasets.length > 0 && research.step === 'Create Research' ? `
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-lg btn-primary" onclick="dashboard.startPipeline('${research.id}')">
+                            <i class="fas fa-play-circle"></i> Empezar Pipeline
+                        </button>
+                    </div>
+                ` : ''}
             </div>
 
             <div class="mt-4">
@@ -791,6 +798,179 @@ class Dashboard {
             uploadBtn.disabled = false;
             cancelBtn.disabled = false;
         }
+    }
+
+    startPipeline(researchId) {
+        this.currentView = 'pipeline';
+        document.getElementById('researchDetailView').style.display = 'none';
+        document.getElementById('pipelineView').style.display = 'block';
+        
+        this.executePipeline(researchId);
+    }
+
+    async executePipeline(researchId) {
+        const research = this.selectedResearch;
+        const username = this.apiClient.currentUser;
+        
+        const steps = [
+            { id: 1, name: 'Crear VectorStore', status: 'pending' },
+            { id: 2, name: 'Búsqueda Semántica', status: 'pending' },
+            { id: 3, name: 'Etiquetar con IA', status: 'pending' }
+        ];
+        
+        if (research.methodology === 'Full') {
+            steps.push({ id: 4, name: 'Entrenar Modelo ML', status: 'pending' });
+        }
+        
+        this.renderPipelineProgress(steps);
+        
+        try {
+            // Step 1: Create VectorStore
+            this.updateStepStatus(1, 'running');
+            const vectorResponse = await this.apiClient.createVectorStore(username, researchId);
+            this.updateStepStatus(1, 'completed', vectorResponse.message);
+            
+            // Step 2: Semantic Search
+            this.updateStepStatus(2, 'running');
+            const queryResponse = await this.apiClient.queryRetriever(username, researchId);
+            const articleIds = queryResponse.results || [];
+            this.updateStepStatus(2, 'completed', `${articleIds.length} artículos encontrados`);
+            
+            // Step 3: Label with AI
+            this.updateStepStatus(3, 'running');
+            let labeledCount = 0;
+            let failedCount = 0;
+            
+            for (let i = 0; i < articleIds.length; i++) {
+                try {
+                    const labelResponse = await this.apiClient.labelArticle(username, researchId, articleIds[i]);
+                    if (labelResponse.message && labelResponse.message.includes('éxito')) {
+                        labeledCount++;
+                    }
+                    this.updateStepProgress(3, `${i + 1}/${articleIds.length} artículos procesados`);
+                } catch (error) {
+                    failedCount++;
+                    console.error(`Error labeling article ${articleIds[i]}:`, error);
+                }
+            }
+            
+            this.updateStepStatus(3, 'completed', `${labeledCount} etiquetados, ${failedCount} fallidos`);
+            
+            // Step 4: Train ML Model (only if Full methodology)
+            if (research.methodology === 'Full') {
+                this.updateStepStatus(4, 'running');
+                const summaryResponse = await this.apiClient.getLabelingSummary(researchId);
+                this.updateStepStatus(4, 'completed', 'Modelo entrenado exitosamente');
+            }
+            
+            // Update research step
+            await this.apiClient.updateResearchStep(researchId, 'Pipeline Completed');
+            
+            this.showNotification('Pipeline completado exitosamente', 'success');
+            
+            // Show results
+            setTimeout(() => {
+                this.showPipelineResults(researchId, labeledCount, articleIds.length);
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Pipeline error:', error);
+            this.showNotification('Error en el pipeline: ' + error.message, 'error');
+        }
+    }
+
+    renderPipelineProgress(steps) {
+        const container = document.getElementById('pipelineProgressContainer');
+        let html = '<div class="pipeline-steps">';
+        
+        steps.forEach(step => {
+            html += `
+                <div class="pipeline-step" id="step-${step.id}">
+                    <div class="step-header">
+                        <div class="step-icon" id="step-icon-${step.id}">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="step-info">
+                            <h5>${step.name}</h5>
+                            <p class="step-status" id="step-status-${step.id}">Esperando...</p>
+                        </div>
+                    </div>
+                    <div class="step-progress" id="step-progress-${step.id}" style="display: none;">
+                        <img src="/static/imgs/load.gif" style="max-width: 100px;">
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    updateStepStatus(stepId, status, message = '') {
+        const stepIcon = document.getElementById(`step-icon-${stepId}`);
+        const stepStatus = document.getElementById(`step-status-${stepId}`);
+        const stepProgress = document.getElementById(`step-progress-${stepId}`);
+        const stepElement = document.getElementById(`step-${stepId}`);
+        
+        stepElement.className = 'pipeline-step';
+        
+        if (status === 'running') {
+            stepElement.classList.add('running');
+            stepIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            stepStatus.textContent = 'Ejecutando...';
+            stepProgress.style.display = 'block';
+        } else if (status === 'completed') {
+            stepElement.classList.add('completed');
+            stepIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+            stepStatus.textContent = message || 'Completado';
+            stepProgress.style.display = 'none';
+        } else if (status === 'error') {
+            stepElement.classList.add('error');
+            stepIcon.innerHTML = '<i class="fas fa-times-circle"></i>';
+            stepStatus.textContent = message || 'Error';
+            stepProgress.style.display = 'none';
+        }
+    }
+
+    updateStepProgress(stepId, message) {
+        const stepStatus = document.getElementById(`step-status-${stepId}`);
+        if (stepStatus) {
+            stepStatus.textContent = message;
+        }
+    }
+
+    showPipelineResults(researchId, labeledCount, totalArticles) {
+        const container = document.getElementById('pipelineProgressContainer');
+        
+        container.innerHTML += `
+            <div class="pipeline-results mt-4">
+                <h4><i class="fas fa-chart-bar"></i> Resultados del Pipeline</h4>
+                <div class="results-summary">
+                    <div class="result-card">
+                        <div class="result-value">${totalArticles}</div>
+                        <div class="result-label">Artículos Procesados</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value">${labeledCount}</div>
+                        <div class="result-label">Artículos Etiquetados</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value">${Math.round((labeledCount/totalArticles)*100)}%</div>
+                        <div class="result-label">Tasa de Éxito</div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button class="btn btn-primary" onclick="dashboard.backToResearch()">
+                        <i class="fas fa-arrow-left"></i> Volver a Investigación
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    backToResearch() {
+        document.getElementById('pipelineView').style.display = 'none';
+        this.showResearchDetail(this.selectedResearch);
     }
 
     showNotification(message, type = 'info') {

@@ -194,3 +194,26 @@ def activate_research(username: str = Form(..., description="Nombre de usuario")
     except Exception as e:
         db.session.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al activar investigación: {str(e)}")
+
+# Actualizar paso de investigación
+@app_research.post("/update-step", summary="Actualizar paso de investigación", 
+                   description="Actualiza el paso actual de una investigación",
+                   tags = ["Research Management"])
+def update_research_step(username: str = Form(..., description="Nombre de usuario"), 
+                        research_id: str = Form(..., description="ID de la investigación"),
+                        step: str = Form(..., description="Nuevo paso de la investigación")):
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
+    research = Research.get_id(research_id)
+    if not research:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Investigación no encontrada.")
+    try:
+        Research.update(research_id, {"step": step})
+        db.session.commit()
+        return {"message": "Paso actualizado", "id": research_id, "step": step}
+    except Exception as e:
+        db.session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al actualizar paso: {str(e)}")
