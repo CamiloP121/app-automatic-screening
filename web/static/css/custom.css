@@ -833,3 +833,22 @@
     letter-spacing: 0.5px;
     margin-top: 5px;
 }
+
+/* Loading Research State */
+.loading-research {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    text-align: center;
+}
+
+.loading-research img {
+    margin-bottom: 20px;
+}
+
+.loading-research p {
+    font-size: 16px;
+    color: #666;
+}

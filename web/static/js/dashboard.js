@@ -321,6 +321,14 @@ class Dashboard {
         listView.style.display = 'none';
         detailView.style.display = 'block';
 
+        // Show loading state
+        detailContent.innerHTML = `
+            <div class="loading-research">
+                <img src="/static/imgs/load.gif" alt="Cargando..." style="max-width: 200px;">
+                <p class="mt-3 text-muted">Cargando información de la investigación...</p>
+            </div>
+        `;
+
         // Load full research details from API
         try {
             const response = await this.apiClient.getResearch(this.apiClient.currentUser, research.id);
@@ -1045,7 +1053,6 @@ class Dashboard {
 
             // Multiply metrics by 100 for percentage display
             const accuracy = Math.round((model.accuracy || 0) * 100);
-            const precision = Math.round((model.precision || 0) * 100);
             const recall = Math.round((model.recall || 0) * 100);
             const f1Score = Math.round((model.f1_score || 0) * 100);
 
@@ -1066,10 +1073,6 @@ class Dashboard {
                             <div class="metric-speedometer">
                                 <canvas id="metricAccuracy${index}" width="120" height="80"></canvas>
                                 <div class="metric-label">Accuracy</div>
-                            </div>
-                            <div class="metric-speedometer">
-                                <canvas id="metricPrecision${index}" width="120" height="80"></canvas>
-                                <div class="metric-label">Precision</div>
                             </div>
                             <div class="metric-speedometer">
                                 <canvas id="metricRecall${index}" width="120" height="80"></canvas>
@@ -1097,12 +1100,10 @@ class Dashboard {
         // Draw speedometers after HTML is rendered
         modelsDetails.forEach((model, index) => {
             const accuracy = Math.round((model.accuracy || 0) * 100);
-            const precision = Math.round((model.precision || 0) * 100);
             const recall = Math.round((model.recall || 0) * 100);
             const f1Score = Math.round((model.f1_score || 0) * 100);
 
             this.drawSpeedometer(`metricAccuracy${index}`, accuracy);
-            this.drawSpeedometer(`metricPrecision${index}`, precision);
             this.drawSpeedometer(`metricRecall${index}`, recall);
             this.drawSpeedometer(`metricF1${index}`, f1Score);
         });
