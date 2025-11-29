@@ -701,18 +701,24 @@ class Dashboard {
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <form id="uploadDatasetForm">
-                                <div class="mb-3">
-                                    <label for="datasetFile" class="form-label">Seleccionar archivo</label>
-                                    <input type="file" class="form-control" id="datasetFile" 
-                                           accept=".csv,.xlsx" required>
-                                    <div class="form-text">Formatos permitidos: .csv, .xlsx</div>
-                                </div>
-                            </form>
+                            <div id="uploadFormContainer">
+                                <form id="uploadDatasetForm">
+                                    <div class="mb-3">
+                                        <label for="datasetFile" class="form-label">Seleccionar archivo</label>
+                                        <input type="file" class="form-control" id="datasetFile" 
+                                               accept=".csv,.xlsx" required>
+                                        <div class="form-text">Formatos permitidos: .csv, .xlsx</div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div id="uploadLoadingContainer" style="display: none;" class="text-center py-4">
+                                <img src="/static/imgs/load.gif" alt="Cargando..." style="max-width: 200px;">
+                                <p class="mt-3 text-muted">Subiendo dataset, por favor espere...</p>
+                            </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="button" class="btn btn-primary" onclick="dashboard.uploadDataset()">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelUploadBtn">Cancelar</button>
+                            <button type="button" class="btn btn-primary" onclick="dashboard.uploadDataset()" id="uploadBtn">
                                 <i class="fas fa-upload"></i> Subir Dataset
                             </button>
                         </div>
@@ -753,9 +759,18 @@ class Dashboard {
             return;
         }
 
+        // Show loading GIF and hide form
+        const formContainer = document.getElementById('uploadFormContainer');
+        const loadingContainer = document.getElementById('uploadLoadingContainer');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const cancelBtn = document.getElementById('cancelUploadBtn');
+        
+        formContainer.style.display = 'none';
+        loadingContainer.style.display = 'block';
+        uploadBtn.disabled = true;
+        cancelBtn.disabled = true;
+
         try {
-            this.showNotification('Subiendo dataset...', 'info');
-            
             const response = await this.apiClient.uploadDataset(this.selectedResearch.id, file);
             
             this.showNotification(response.message || 'Dataset cargado exitosamente', 'success');
@@ -769,6 +784,12 @@ class Dashboard {
         } catch (error) {
             console.error('Error uploading dataset:', error);
             this.showNotification(error.message || 'Error al subir el dataset', 'error');
+            
+            // Restore form on error
+            formContainer.style.display = 'block';
+            loadingContainer.style.display = 'none';
+            uploadBtn.disabled = false;
+            cancelBtn.disabled = false;
         }
     }
 
