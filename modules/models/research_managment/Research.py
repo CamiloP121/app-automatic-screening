@@ -13,7 +13,7 @@ class Research(db.base):
     __tablename__ = "researches"
 
     id = Column(String, primary_key=True)  # Id único de la investigación
-    title = Column(String, unique=True, nullable=False) # Título de la investigación
+    title = Column(String, nullable=False) # Título de la investigación
     type_research = Column(String, nullable=False)  # Tipo de investigación
     methodology = Column(String)  # Metodología a utilizar
     criteria_inclusion = Column(String)    # Criterios de inclusión
