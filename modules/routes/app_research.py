@@ -98,8 +98,8 @@ def update_research(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al actualizar investigación: {str(e)}")
 
 # Obtener investigaciones
-@app_research.post("/get-research", summary="Obtener investigaciones", description="Obtiene las investigaciones del usuario")
-def get_research(username: str = Form(..., description="Nombre de usuario")):
+@app_research.post("/get-research-user", summary="Obtener investigaciones de un usuario", description="Obtiene las investigaciones del usuario")
+def get_research_by_user(username: str = Form(..., description="Nombre de usuario")):
     user = Users.get_username(username)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
@@ -114,6 +114,42 @@ def get_research(username: str = Form(..., description="Nombre de usuario")):
         return {"researches": researches}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener investigaciones: {str(e)}")
+    
+# Obtener investigaciones
+@app_research.post("/get-research", summary="Obtener investigación", description="Obtiene las investigaciones del usuario")
+def get_research(username: str = Form(..., description="Nombre de usuario"),
+                research_id: str = Form(..., description="ID de la investigación")):
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
+    try:
+        
+        research = Research.get_id(research_id)
+        if not research:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Investigación no encontrada.")
+        
+        if not research.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="La investigación está inactiva.")
+        
+        info_research = {
+            "id": research.id,
+            "title": research.title,
+            "type_research": research.type_research,
+            "methodology": 'Automatizada' if research.methodology == 'Full' else 'Semi automatizada',
+            "criteria_inclusion": research.criteria_inclusion.split("|&|") if research.criteria_inclusion else [],
+            "created_at": research.created_at,
+            "updated_at": research.updated_at,
+            "is_active": research.is_active,
+            "is_test": research.is_test,
+            "step": research.step,
+            "researcherOwnerId": research.researcherOwnerId
+        }
+
+        return {"research": info_research}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener investigación: {str(e)}")
 
 # Inactivar investigación
 @app_research.post("/inactivate", summary="Inactivar investigación", 
