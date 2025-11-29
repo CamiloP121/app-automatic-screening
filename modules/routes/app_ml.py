@@ -247,6 +247,17 @@ def execute_inference(username : str = Form(..., description="Nombre de usuario 
     if not model_details:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Modelo entrenado no encontrado.")
     
+    # Verificar si ya existe una predicción para este artículo con este modelo
+    result_article = MlClassifier.get_by_article_and_model(article_id, model_id)
+    if result_article:
+        return {
+            "message": "Inferencia ejecutada y resultado guardado exitosamente.",
+            "article_id": result_article.id_article,
+            "prediction": result_article.prediction,
+            "probability_excluded": result_article.probability_excluded,
+            "probability_included": result_article.probability_included
+        }
+    
     try:
         try:
             # Cargar Modelo
@@ -299,3 +310,164 @@ def execute_inference(username : str = Form(..., description="Nombre de usuario 
         logger.error(f"Error al ejecutar la inferencia: {str(e)}")
         db.session.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno del servidor.")
+@app_ml.post("/batch_inference", summary="Ejecutar inferencia masiva",
+              description="Ejecuta inferencia sobre m\u00faltiples art\u00edculos con un modelo ML")
+async def batch_inference(username: str = Form(...), 
+                          model_id: str = Form(...),
+                          article_ids: str = Form(..., description="Lista de IDs de art\u00edculos separados por comas")):
+    
+    user = Users.get_username(username)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no autorizado")
+    
+    try:
+        # Parsear IDs de art\u00edculos
+        articles_list = article_ids.split(',')
+        
+        # Obtener modelo
+        model_details = TrainedModel.get_id(model_id)
+        if not model_details:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Modelo no encontrado")
+        
+        # Cargar modelo y vectorizer
+        model_data_bytes = base64.b64decode(model_details.model_data)
+        model_and_vectorizer = pickle.loads(model_data_bytes)
+        model = model_and_vectorizer['model']
+        vectorizer = model_and_vectorizer['vectorizer']
+        
+        predictions = []
+        skipped = 0
+        
+        # Procesar cada art\u00edculo
+        for article_id in articles_list:
+            article_id = article_id.strip()
+            if not article_id:
+                continue
+                
+            try:
+                # Verificar si ya existe predicción para este artículo y modelo
+                existing_prediction = MlClassifier.get_by_article_and_model(article_id, model_id)
+                if existing_prediction:
+                    skipped += 1
+                    continue
+                
+                # Obtener artículo de la base de datos
+                article = Articles.get_id(article_id)
+                if not article or not article.abstract:
+                    continue
+                
+                # Vectorizar
+                input_data = vectorizer.transform([article.abstract], flag_lematized=True)
+                input_data = input_data.toarray()
+                
+                # Predecir
+                predict_result = model.predict(input_data)
+                
+                # Guardar en base de datos
+                ml_record = {
+                    "id_article": article_id,
+                    "prediction": predict_result["labels"][0],
+                    "probability_excluded": predict_result["probabilities"][0][0],
+                    "probability_included": predict_result["probabilities"][0][1],
+                    "flag_complete": True,
+                    "create_at": datetime.now(),
+                    "update_at": datetime.now(),
+                    "ModelOwnerId": model_id,
+                }
+                
+                MlClassifier.add(ml_record)
+                
+                predictions.append({
+                    "article_id": article_id,
+                    "prediction": predict_result["labels"][0],
+                    "confidence": float(max(predict_result["probabilities"][0]))
+                })
+                
+            except Exception as e:
+                logger.error(f"Error processing article {article_id}: {e}")
+                continue
+        
+        db.session.commit()
+        
+        return {
+            "message": f"Inferencia masiva completada. {len(predictions)} nuevos, {skipped} omitidos.",
+            "total_processed": len(predictions),
+            "total_skipped": skipped,
+            "predictions": predictions
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in batch inference: {e}")
+        db.session.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@app_ml.get("/download/{research_id}", summary="Descargar predicciones ML como CSV",
+             description="Descarga todas las predicciones ML en formato CSV")
+async def download_ml_predictions_csv(research_id: str):
+    from fastapi.responses import StreamingResponse
+    import io
+    import pandas as pd
+    
+    try:
+        # Obtener modelos de la investigaci\u00f3n
+        models = TrainedModel.get_by_research(research_id)
+        if not models:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hay modelos para esta investigaci\u00f3n")
+        
+        model_ids = [m['id'] for m in models]
+        
+        # Obtener todas las predicciones
+        all_predictions = []
+        for model_id in model_ids:
+            predictions = MlClassifier.get_all_by_model(model_id)
+            if predictions:
+                all_predictions.extend(predictions)
+        
+        if not all_predictions:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hay predicciones para esta investigaci\u00f3n")
+        
+        # Convertir a DataFrame
+        df = pd.DataFrame(all_predictions)
+        
+        # Crear CSV en memoria
+        stream = io.StringIO()
+        df.to_csv(stream, index=False, encoding='utf-8')
+        stream.seek(0)
+        
+        return StreamingResponse(
+            iter([stream.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=ml_predictions_{research_id}.csv"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error downloading ML predictions CSV for research {research_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al descargar CSV: {str(e)}")
+
+@app_ml.get("/predictions/{research_id}", summary="Obtener predicciones ML por investigaci\u00f3n",
+             description="Obtiene todas las predicciones ML de una investigaci\u00f3n")
+async def get_ml_predictions(research_id: str):
+    try:
+        # Obtener modelos de la investigaci\u00f3n
+        models = TrainedModel.get_by_research(research_id)
+        if not models:
+            return {"predictions": [], "total": 0, "message": "No hay modelos entrenados"}
+        
+        model_ids = [m['id'] for m in models]
+        
+        # Obtener todas las predicciones de todos los modelos
+        all_predictions = []
+        for model_id in model_ids:
+            predictions = MlClassifier.get_all_by_model(model_id)
+            if predictions:
+                all_predictions.extend(predictions)
+        
+        return {
+            "predictions": all_predictions,
+            "total": len(all_predictions),
+            "message": f"Se encontraron {len(all_predictions)} predicciones"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting ML predictions for research {research_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener predicciones: {str(e)}")

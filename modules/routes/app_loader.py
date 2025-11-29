@@ -173,3 +173,36 @@ def delete_articles(dataset_id: str = Form(..., description="ID del dataset cuyo
         db.session.rollback()
         logger.error(f"Error deleting articles from dataset {dataset_id}: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error deleting articles: {str(e)}")
+
+@app_loader.post("/get-articles-by-research", summary="Obtener todos los art\u00edculos de una investigaci\ón",
+                  description="Obtiene todos los art\u00edculos de todos los datasets asociados a una investigaci\ón")
+async def get_articles_by_research(research_id: str = Form(..., description="ID de la investigaci\ón")):
+    try:
+        # Verificar que la investigaci\ón existe
+        research = Research.get_id(research_id)
+        if not research:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"La investigación con ID {research_id} no existe")
+        
+        # Obtener todos los datasets de la investigación
+        df_datasets = Datasets.get_all_by_research(research_id)
+        if df_datasets.empty:
+            return {"articles": [], "total": 0}
+        
+        dataset_ids = df_datasets['id'].tolist()
+        
+        # Obtener todos los IDs de artículos de cada dataset
+        all_article_ids = []
+        for dataset_id in dataset_ids:
+            df_articles = Articles.get_all_by_dataset(dataset_id)
+            if not df_articles.empty:
+                article_ids = df_articles['id'].tolist()
+                all_article_ids.extend(article_ids)
+        print(f"Total articles found: {len(all_article_ids)}")
+        return {
+            "article_ids": all_article_ids,
+            "total": len(all_article_ids)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting articles by research {research_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al obtener artículos: {str(e)}")

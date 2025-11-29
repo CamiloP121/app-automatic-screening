@@ -8,6 +8,7 @@ class MlClassifier(db.base):
     __tablename__ = "ml_classifiers"
 
     id_article = Column(String, ForeignKey("articles.id"), primary_key=True, nullable=False)
+    ModelOwnerId = Column(String, ForeignKey("trained_models.id"), primary_key=True, nullable=False)
     prediction = Column(String)
     probability_excluded = Column(Float)
     probability_included = Column(Float)
@@ -15,9 +16,6 @@ class MlClassifier(db.base):
     create_at = Column(DateTime, default=datetime.now)
     update_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     ArticleOwner = relationship("Articles", back_populates="ml_classifiers")
-
-    # Relación con investigadores
-    ModelOwnerId = Column(String, ForeignKey("trained_models.id"))
     ModelOwner = relationship("TrainedModel", back_populates="ml_classifiers")
 
 
@@ -78,6 +76,11 @@ class MlClassifier(db.base):
         return db.session.query(cls).filter_by(id_article=id_article).first()
 
     @classmethod
+    def get_by_article_and_model(cls, id_article, model_id):
+        """Obtiene un registro MlClassifier por id_article y ModelOwnerId."""
+        return db.session.query(cls).filter_by(id_article=id_article, ModelOwnerId=model_id).first()
+
+    @classmethod
     def get_prediction(cls, id_article):
         """Devuelve prediction y probabilidades si existe el registro, sino None."""
         classifier = cls.get_by_article(id_article)
@@ -114,5 +117,25 @@ class MlClassifier(db.base):
                 "flag_complete": r.flag_complete,
                 "create_at": r.create_at,
                 "update_at": r.update_at
+            })
+        return items
+    @classmethod
+    def get_all_by_model(cls, model_id):
+        # """Devuelve todas las predicciones de un modelo específico con información del artículo."""
+        resultados = db.session.query(cls).filter_by(ModelOwnerId=model_id).all()
+        items = []
+        for r in resultados:
+            article = Articles.get_id(r.id_article)
+            items.append({
+                "id_article": r.id_article,
+                "abstract": article.abstract if article else "",
+                "prediction": r.prediction,
+                "probability_excluded": r.probability_excluded,
+                "probability_included": r.probability_included,
+                "confidence": max(r.probability_excluded, r.probability_included) if r.probability_excluded and r.probability_included else None,
+                "flag_complete": r.flag_complete,
+                "created_at": r.create_at,
+                "updated_at": r.update_at,
+                "model_id": r.ModelOwnerId
             })
         return items

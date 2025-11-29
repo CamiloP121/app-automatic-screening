@@ -777,16 +777,21 @@ class Dashboard {
                 <div class="results-table-container">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="mb-0">Artículos Etiquetados</h6>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-primary active" onclick="dashboard.filterResults('all')">
-                                Todos
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-success" onclick="dashboard.downloadAILabelerData()">
+                                <i class="fas fa-download"></i> Descargar Base
                             </button>
-                            <button type="button" class="btn btn-outline-success" onclick="dashboard.filterResults('include')">
-                                Incluir
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="dashboard.filterResults('exclude')">
-                                Excluir
-                            </button>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active" onclick="dashboard.filterResults('all')">
+                                    Todos
+                                </button>
+                                <button type="button" class="btn btn-outline-success" onclick="dashboard.filterResults('include')">
+                                    Incluir
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="dashboard.filterResults('exclude')">
+                                    Excluir
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -1179,10 +1184,268 @@ class Dashboard {
     }
 
     openInferenceTab(modelId, type) {
-        const message = type === 'batch' 
-            ? 'Próximamente: Predicción masiva del resto de la base de datos'
-            : 'Próximamente: Predicción individual de artículos';
-        alert(message + ' (Modelo: ' + modelId + ')');
+        if (type === 'batch') {
+            this.startBatchInference(modelId);
+        } else {
+            alert('Próximamente: Predicción individual de artículos (Modelo: ' + modelId + ')');
+        }
+    }
+
+    async startBatchInference(modelId) {
+        if (!this.selectedResearch) {
+            this.showNotification('No hay investigación seleccionada', 'error');
+            return;
+        }
+
+        const researchId = this.selectedResearch.id;
+        const username = this.apiClient.currentUser;
+
+        if (!confirm('¿Desea ejecutar predicción masiva sobre toda la base de datos?')) {
+            return;
+        }
+
+        // Switch to batch inference view
+        this.currentView = 'batch-inference';
+        document.getElementById('researchDetailView').style.display = 'none';
+        document.getElementById('batchInferenceView').style.display = 'block';
+
+        await this.executeBatchInference(modelId, researchId, username);
+    }
+
+    async executeBatchInference(modelId, researchId, username) {
+        const progressContainer = document.getElementById('batchInferenceProgress');
+        const resultsContainer = document.getElementById('batchInferenceResults');
+
+        try {
+            // Show loading state
+            progressContainer.innerHTML = `
+                <div class="text-center py-5">
+                    <img src="/static/imgs/load.gif" alt="Cargando..." style="max-width: 200px;">
+                    <p class="mt-3 text-muted">Obteniendo todos los artículos de la investigación...</p>
+                </div>
+            `;
+            resultsContainer.innerHTML = '';
+
+            // Get ALL article IDs from ALL datasets in the research
+            const articlesResponse = await this.apiClient.getAllArticlesByResearch(researchId);
+            const articleIds = articlesResponse.article_ids || [];
+
+            if (articleIds.length === 0) {
+                throw new Error('No hay artículos en la base de datos de esta investigación');
+            }
+
+            const totalArticles = articleIds.length;
+
+            // Show progress container
+            progressContainer.innerHTML = `
+                <div class="text-center py-5">
+                    <p class="mb-3 text-muted">Ejecutando predicción masiva...</p>
+                    <div class="progress" style="max-width: 500px; margin: 0 auto; height: 30px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             id="batchProgressBar"
+                             style="width: 0%; font-size: 14px; line-height: 30px;">
+                            0%
+                        </div>
+                    </div>
+                    <p class="mt-2 text-muted" id="batchProgressText">0/${totalArticles} artículos procesados</p>
+                    <p class="text-muted mt-2"><small>Este proceso puede tomar varios minutos</small></p>
+                </div>
+            `;
+
+            // Execute batch inference with progress tracking
+            await this.executeBatchInferenceWithProgress(username, modelId, articleIds, totalArticles);
+
+            // After completion, get and show results
+            const predictions = await this.apiClient.getMLPredictions(researchId);
+
+            // Show results
+            this.renderBatchInferenceResults({ predictions: predictions.predictions || [] }, totalArticles);
+
+        } catch (error) {
+            console.error('Error in batch inference:', error);
+            progressContainer.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-danger mb-3">Error: ${error.message}</p>
+                    <button class="btn btn-primary" onclick="dashboard.backToResearch()">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    async executeBatchInferenceWithProgress(username, modelId, articleIds, totalArticles) {
+        const batchSize = 50; // Procesar 50 artículos por lote
+        let processed = 0;
+        let totalNew = 0;
+        let totalSkipped = 0;
+
+        // Procesar en lotes
+        for (let i = 0; i < articleIds.length; i += batchSize) {
+            const batch = articleIds.slice(i, Math.min(i + batchSize, articleIds.length));
+            
+            try {
+                // Ejecutar inferencia del lote usando batch_inference endpoint
+                const response = await this.apiClient.executeBatchInference(username, modelId, batch);
+                totalNew += response.total_processed || 0;
+                totalSkipped += response.total_skipped || 0;
+            } catch (error) {
+                console.error(`Error procesando lote ${i}-${i + batchSize}:`, error);
+            }
+            
+            processed = Math.min(i + batchSize, articleIds.length);
+            
+            // Actualizar barra de progreso
+            const percentage = Math.round((processed / totalArticles) * 100);
+            const progressBar = document.getElementById('batchProgressBar');
+            const progressText = document.getElementById('batchProgressText');
+            
+            if (progressBar && progressText) {
+                progressBar.style.width = percentage + '%';
+                progressBar.textContent = percentage + '%';
+                progressText.textContent = `${processed}/${totalArticles} artículos procesados`;
+            }
+            
+            // Pequeña pausa para actualizar UI
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        console.log(`Batch inference completed: ${totalNew} new, ${totalSkipped} skipped`);
+    }
+
+    renderBatchInferenceResults(response, totalArticles) {
+        const progressContainer = document.getElementById('batchInferenceProgress');
+        const resultsContainer = document.getElementById('batchInferenceResults');
+
+        progressContainer.innerHTML = '';
+
+        const predictions = response.predictions || [];
+        const includeCount = predictions.filter(p => p.prediction && p.prediction.toLowerCase().includes('include')).length;
+        const excludeCount = predictions.filter(p => p.prediction && p.prediction.toLowerCase().includes('exclude')).length;
+
+        resultsContainer.innerHTML = `
+            <div class="detail-section">
+                <h5><i class="fas fa-chart-bar"></i> Resultados de Predicción Masiva</h5>
+                
+                <div class="results-stats mb-4">
+                    <div class="stat-card stat-total">
+                        <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value">${totalArticles}</div>
+                            <div class="stat-label">Total Procesados</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card stat-include">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value">${includeCount}</div>
+                            <div class="stat-label">Incluir (${Math.round((includeCount/totalArticles)*100)}%)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card stat-exclude">
+                        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value">${excludeCount}</div>
+                            <div class="stat-label">Excluir (${Math.round((excludeCount/totalArticles)*100)}%)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3 text-end">
+                    <button class="btn btn-success" onclick="dashboard.downloadMLPredictions()">
+                        <i class="fas fa-download"></i> Descargar Resultados CSV
+                    </button>
+                </div>
+                
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th style="width: 50%">Abstract</th>
+                                <th style="width: 20%">Predicción</th>
+                                <th style="width: 15%">Confianza</th>
+                                <th style="width: 15%">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${this.renderMLPredictionRows(predictions)}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4">
+                    <button class="btn btn-primary" onclick="dashboard.backToResearch()">
+                        <i class="fas fa-arrow-left"></i> Volver a Investigación
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderMLPredictionRows(predictions) {
+        if (!predictions || predictions.length === 0) {
+            return '<tr><td colspan="4" class="text-center text-muted">No hay predicciones</td></tr>';
+        }
+
+        return predictions.map(item => {
+            const prediction = item.prediction ? item.prediction.toLowerCase() : 'n/a';
+            const isInclude = prediction.includes('include');
+            const isExclude = prediction.includes('exclude');
+            
+            const badgeClass = isInclude ? 'badge-success' : 
+                              isExclude ? 'badge-danger' : 'badge-secondary';
+            const predictionText = isInclude ? 'Incluir' : 
+                                  isExclude ? 'Excluir' : 'N/A';
+            
+            const abstract = item.abstract || 'Sin abstract';
+            const truncatedAbstract = abstract.length > 150 ? 
+                abstract.substring(0, 150) + '...' : abstract;
+
+            const confidence = item.confidence ? (item.confidence * 100).toFixed(1) + '%' : 'N/A';
+            const date = item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES') : 'N/A';
+            
+            return `
+                <tr>
+                    <td><small>${this.escapeHtml(truncatedAbstract)}</small></td>
+                    <td><span class="badge ${badgeClass}">${predictionText}</span></td>
+                    <td><small>${confidence}</small></td>
+                    <td><small>${date}</small></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async downloadAILabelerData() {
+        if (!this.selectedResearch) {
+            this.showNotification('No hay investigación seleccionada', 'error');
+            return;
+        }
+
+        try {
+            await this.apiClient.downloadAILabelerCSV(this.selectedResearch.id);
+            this.showNotification('Descarga iniciada', 'success');
+        } catch (error) {
+            console.error('Error downloading AI Labeler data:', error);
+            this.showNotification('Error al descargar: ' + error.message, 'error');
+        }
+    }
+
+    async downloadMLPredictions() {
+        if (!this.selectedResearch) {
+            this.showNotification('No hay investigación seleccionada', 'error');
+            return;
+        }
+
+        try {
+            await this.apiClient.downloadMLClassifierCSV(this.selectedResearch.id);
+            this.showNotification('Descarga iniciada', 'success');
+        } catch (error) {
+            console.error('Error downloading ML predictions:', error);
+            this.showNotification('Error al descargar: ' + error.message, 'error');
+        }
     }
 
     async trainNewModel() {
@@ -1577,6 +1840,7 @@ class Dashboard {
 
     backToResearch() {
         document.getElementById('pipelineView').style.display = 'none';
+        document.getElementById('batchInferenceView').style.display = 'none';
         this.showResearchDetail(this.selectedResearch);
     }
 

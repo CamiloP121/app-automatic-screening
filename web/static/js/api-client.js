@@ -397,6 +397,117 @@ class APIClient {
         return this.get(`/classifier/trained_model/${modelId}`);
     }
 
+    /**
+     * Obtener todos los artículos de una investigación (de todos sus datasets)
+     */
+    async getAllArticlesByResearch(researchId) {
+        const formData = new URLSearchParams();
+        formData.append('research_id', researchId);
+        
+        return this.makeRequest('/data/get-articles-by-research', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+    }
+
+    /**
+     * Ejecutar inferencia individual con un modelo ML
+     */
+    async executeInference(username, modelId, articleId) {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('model_id', modelId);
+        formData.append('article_id', articleId);
+        
+        return this.makeRequest('/classifier/execute_inference', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+    }
+
+    /**
+     * Ejecutar inferencia masiva con un modelo ML
+     */
+    async executeBatchInference(username, modelId, articleIds) {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('model_id', modelId);
+        formData.append('article_ids', articleIds.join(','));
+        
+        return this.makeRequest('/classifier/batch_inference', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+    }
+
+    /**
+     * Obtener resultados de predicciones ML por investigación
+     */
+    async getMLPredictions(researchId) {
+        return this.get(`/classifier/predictions/${researchId}`);
+    }
+
+    /**
+     * Descargar resultados de AI Labeler como CSV
+     */
+    async downloadAILabelerCSV(researchId) {
+        const response = await fetch(`${this.baseURL}/labeler/download/${researchId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al descargar el archivo');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ai_labeler_${researchId}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+
+    /**
+     * Descargar resultados de ML Classifier como CSV
+     */
+    async downloadMLClassifierCSV(researchId) {
+        const response = await fetch(`${this.baseURL}/classifier/download/${researchId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al descargar el archivo');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ml_predictions_${researchId}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+
     // === GESTIÓN DE SESIÓN ===
     
     getCurrentUser() {

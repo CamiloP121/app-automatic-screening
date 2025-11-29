@@ -321,3 +321,35 @@ def labeler_reprocess(research_id: str = Form(..., description="ID de la investi
         "message": f"Reprocesados {len(reprocessed)} artículos.",
         "reprocessed_ids": reprocessed
     }
+@app_labeler.get("/download/{research_id}", summary="Descargar resultados de AI Labeler como CSV",
+                  description="Descarga todos los art\u00edculos etiquetados por AI Labeler en formato CSV")
+async def download_ai_labeler_csv(research_id: str):
+    from fastapi.responses import StreamingResponse
+    import io
+    import pandas as pd
+    
+    try:
+        # Obtener resultados etiquetados
+        items = AiLabeler.get_by_research(research_id)
+        
+        if not items:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hay resultados etiquetados para esta investigaci\u00f3n")
+        
+        # Convertir a DataFrame
+        df = pd.DataFrame(items)
+        
+        # Crear CSV en memoria
+        stream = io.StringIO()
+        df.to_csv(stream, index=False, encoding='utf-8')
+        stream.seek(0)
+        
+        # Retornar como respuesta de descarga
+        return StreamingResponse(
+            iter([stream.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=ai_labeler_{research_id}.csv"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error downloading AI Labeler CSV for research {research_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error al descargar CSV: {str(e)}")

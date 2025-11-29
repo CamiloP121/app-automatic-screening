@@ -10,7 +10,7 @@ if mode == "dev":
     logging.basicConfig(
         format='"timestamp": %(asctime)s , %(message)s',
         datefmt='"%d-%m-%Y %I:%M:%S %p"',
-        level=logging.DEBUG,
+        level=logging.INFO,
     )
 else:
     logging.basicConfig(
