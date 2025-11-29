@@ -121,6 +121,11 @@ class Dashboard {
                 this.updateRemoveButtons();
             }
         });
+
+        // Research type change handler
+        document.getElementById('researchType').addEventListener('change', (e) => {
+            this.updateResearchTypeDescription(e.target.value);
+        });
     }
 
     switchView(viewName) {
@@ -193,6 +198,27 @@ class Dashboard {
                 </button>
             </div>
         `;
+        
+        // Clear research type description
+        document.getElementById('researchTypeDescription').textContent = '';
+    }
+
+    updateResearchTypeDescription(typeValue) {
+        const descriptions = {
+            'Effectiveness': 'Objetivo: Evaluar la efectividad de un tratamiento o práctica en términos de su impacto en los resultados.',
+            'Experiential': 'Objetivo: Investigar la experiencia o la significancia de un fenómeno particular.',
+            'Costs': 'Objetivo: Determinar los costos asociados a un enfoque o estrategia de tratamiento, especialmente en términos de costo-efectividad o beneficio.',
+            'Prevalence': 'Objetivo: Determinar la prevalencia y/o incidencia de una condición específica.',
+            'Diagnostic': 'Objetivo: Determinar qué tan bien funciona una prueba diagnóstica en términos de sensibilidad y especificidad para un diagnóstico particular.',
+            'Etiology': 'Objetivo: Determinar la asociación entre exposiciones o factores de riesgo específicos y los resultados.',
+            'Expert Opinion': 'Objetivo: Revisar y sintetizar la opinión experta actual, textos o políticas sobre un fenómeno particular.',
+            'Psychometric': 'Objetivo: Evaluar las propiedades psicométricas de un test, normalmente para determinar la confiabilidad y validez de un instrumento o evaluación.',
+            'Prognostic': 'Objetivo: Determinar el pronóstico general de una condición, el vínculo entre factores pronósticos y un resultado, y/o modelos y pruebas de predicción.',
+            'Methodology': 'Objetivo: Examinar e investigar métodos de investigación actuales y su posible impacto en la calidad de la investigación.'
+        };
+
+        const descriptionElement = document.getElementById('researchTypeDescription');
+        descriptionElement.textContent = descriptions[typeValue] || '';
     }
 
     async loadResearches() {
