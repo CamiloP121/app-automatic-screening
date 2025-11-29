@@ -234,7 +234,7 @@ class Dashboard {
             const formData = new FormData();
             formData.append('username', this.currentUser);
 
-            const response = await this.apiClient.makeRequest('/research/get-research', {
+            const response = await this.apiClient.makeRequest('/research/get-research-user', {
                 method: 'POST',
                 body: formData,
                 headers: {} // Remove Content-Type to let browser set it with boundary
@@ -310,7 +310,7 @@ class Dashboard {
         });
     }
 
-    showResearchDetail(research) {
+    async showResearchDetail(research) {
         this.selectedResearch = research;
         this.currentView = 'detail';
 
@@ -320,6 +320,26 @@ class Dashboard {
 
         listView.style.display = 'none';
         detailView.style.display = 'block';
+
+        // Load full research details from API
+        try {
+            const response = await this.apiClient.getResearch(this.apiClient.currentUser, research.id);
+            const fullResearch = response.research;
+            this.selectedResearch = fullResearch;
+
+            // Load datasets for this research
+            const datasetsResponse = await this.apiClient.listDatasets(research.id);
+            const datasets = datasetsResponse.datasets || [];
+
+            this.renderResearchDetail(fullResearch, datasets);
+        } catch (error) {
+            console.error('Error loading research details:', error);
+            this.showNotification('Error al cargar los detalles de la investigación', 'error');
+        }
+    }
+
+    renderResearchDetail(research, datasets) {
+        const detailContent = document.getElementById('researchDetailContent');
 
         // Format dates
         const createdDate = new Date(research.created_at);
@@ -337,11 +357,17 @@ class Dashboard {
 
         // Parse criteria inclusion
         let criteriaHtml = '<p class="text-muted">No hay criterios de inclusión definidos</p>';
-        if (research.criteria_inclusion) {
-            const criteria = research.criteria_inclusion.split('|&|');
+        if (research.criteria_inclusion && research.criteria_inclusion.length > 0) {
+            // criteria_inclusion viene como array desde el endpoint /get-research
+            const criteria = Array.isArray(research.criteria_inclusion) 
+                ? research.criteria_inclusion 
+                : research.criteria_inclusion.split('|&|');
+            
             criteriaHtml = '<ul class="criteria-list">';
             criteria.forEach(criterion => {
-                criteriaHtml += `<li>${this.escapeHtml(criterion)}</li>`;
+                if (criterion && criterion.trim()) {
+                    criteriaHtml += `<li>${this.escapeHtml(criterion)}</li>`;
+                }
             });
             criteriaHtml += '</ul>';
         }
@@ -386,6 +412,18 @@ class Dashboard {
             <div class="detail-section">
                 <h5><i class="fas fa-list-check"></i> Criterios de Inclusión</h5>
                 ${criteriaHtml}
+            </div>
+
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-database"></i> Datasets</h5>
+                    <button class="btn btn-success btn-sm" onclick="dashboard.showUploadDatasetModal()">
+                        <i class="fas fa-upload"></i> Agregar Dataset
+                    </button>
+                </div>
+                <div id="datasetsList">
+                    ${this.renderDatasetsList(datasets)}
+                </div>
             </div>
 
             <div class="mt-4">
@@ -612,6 +650,136 @@ class Dashboard {
         } catch (error) {
             console.error('Error changing password:', error);
             this.showError('Error al cambiar la contraseña: ' + error.message);
+        }
+    }
+
+    renderDatasetsList(datasets) {
+        if (!datasets || datasets.length === 0) {
+            return '<p class="text-muted">No hay datasets cargados para esta investigación.</p>';
+        }
+
+        let html = '<div class="list-group">';
+        datasets.forEach(dataset => {
+            const uploadDate = new Date(dataset.created_at);
+            const formattedDate = uploadDate.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="fas fa-file-excel text-success me-2"></i>
+                                ${this.escapeHtml(dataset.filename)}
+                            </h6>
+                            <p class="mb-1 text-muted small">
+                                <i class="fas fa-calendar me-1"></i> ${formattedDate}
+                                <span class="ms-3"><i class="fas fa-list-ol me-1"></i> ${dataset.number_of_records} registros</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        return html;
+    }
+
+    showUploadDatasetModal() {
+        const modalHtml = `
+            <div class="modal fade" id="uploadDatasetModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Agregar Dataset</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="uploadDatasetForm">
+                                <div class="mb-3">
+                                    <label for="datasetFile" class="form-label">Seleccionar archivo</label>
+                                    <input type="file" class="form-control" id="datasetFile" 
+                                           accept=".csv,.xlsx" required>
+                                    <div class="form-text">Formatos permitidos: .csv, .xlsx</div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" onclick="dashboard.uploadDataset()">
+                                <i class="fas fa-upload"></i> Subir Dataset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remove existing modal if any
+        const existingModal = document.getElementById('uploadDatasetModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('uploadDatasetModal'));
+        modal.show();
+    }
+
+    async uploadDataset() {
+        const fileInput = document.getElementById('datasetFile');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            this.showNotification('Por favor seleccione un archivo', 'error');
+            return;
+        }
+
+        // Validate file extension
+        const validExtensions = ['.csv', '.xlsx'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!validExtensions.includes(fileExtension)) {
+            this.showNotification('Formato de archivo no válido. Use .csv o .xlsx', 'error');
+            return;
+        }
+
+        try {
+            this.showNotification('Subiendo dataset...', 'info');
+            
+            const response = await this.apiClient.uploadDataset(this.selectedResearch.id, file);
+            
+            this.showNotification(response.message || 'Dataset cargado exitosamente', 'success');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDatasetModal'));
+            modal.hide();
+            
+            // Reload research details to show new dataset
+            await this.showResearchDetail(this.selectedResearch);
+        } catch (error) {
+            console.error('Error uploading dataset:', error);
+            this.showNotification(error.message || 'Error al subir el dataset', 'error');
+        }
+    }
+
+    showNotification(message, type = 'info') {
+        // Use existing showError/showSuccess methods
+        if (type === 'error') {
+            this.showError(message);
+        } else if (type === 'success') {
+            this.showSuccess(message);
+        } else {
+            alert(message);
         }
     }
 

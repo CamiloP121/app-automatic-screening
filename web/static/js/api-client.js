@@ -141,6 +141,14 @@ class APIClient {
         return this.postForm('/user/get-user', formData);
     }
 
+    async getResearch(username, researchId) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('research_id', researchId);
+        
+        return this.postForm('/research/get-research', formData);
+    }
+
     async updateUser(username, userData) {
         const formData = new FormData();
         formData.append('username', username);
@@ -165,6 +173,14 @@ class APIClient {
     }
 
     // === MÉTODOS DE INVESTIGACIÓN ===
+
+    async getResearch(username, researchId) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('research_id', researchId);
+        
+        return this.postForm('/research/get-research', formData);
+    }
     
     async getResearchByOwner(username) {
         return this.get(`/research/get-by-owner/${username}`);
@@ -177,6 +193,42 @@ class APIClient {
         });
         
         return this.postForm('/research/create', formData);
+    }
+
+    async saveResearch(researchData) {
+        const formData = new URLSearchParams();
+        formData.append('username', this.currentUser);
+        formData.append('title', researchData.title);
+        formData.append('type_research', researchData.type_research);
+        formData.append('methodology', researchData.methodology);
+        formData.append('criteria_inclusion', researchData.criteria_inclusion);
+        formData.append('is_test', researchData.is_test);
+
+        return this.makeRequest('/research/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+    }
+
+    // === MÉTODOS DE LOADER ===
+
+    async listDatasets(researchId) {
+        const formData = new FormData();
+        formData.append('research_id', researchId);
+        
+        return this.postForm('/data/list-datasets', formData);
+    }
+
+    async uploadDataset(researchId, file) {
+        const formData = new FormData();
+        formData.append('username', this.currentUser);
+        formData.append('research_id', researchId);
+        formData.append('file', file);
+        
+        return this.postForm('/data/load-data', formData);
     }
 
     // === MÉTODOS DE DATOS ===
