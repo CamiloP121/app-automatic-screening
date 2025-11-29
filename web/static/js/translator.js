@@ -109,102 +109,6 @@ class TranslationManager {
                 'common.warning': 'Advertencia',
                 'common.info': 'Información'
             },
-            fr: {
-                // Login page
-                'login.subtitle': 'Connectez-vous à votre compte',
-                'login.username': 'Nom d\'utilisateur',
-                'login.password': 'Mot de passe',
-                'login.signin': 'Se connecter',
-                'login.noAccount': 'Vous n\'avez pas de compte?',
-                'login.signupHere': 'Inscrivez-vous ici',
-                'login.signingIn': 'Connexion en cours...',
-                'login.welcome': 'Bienvenue! Redirection...',
-                'login.error': 'Erreur de connexion',
-                'login.connectionError': 'Erreur de connexion. Veuillez réessayer.',
-                
-                // Register page
-                'register.title': 'Créer un Compte',
-                'register.subtitle': 'Inscrivez-vous pour accéder au système',
-                'register.username': 'Nom d\'utilisateur',
-                'register.name': 'Nom',
-                'register.email': 'Adresse e-mail',
-                'register.password': 'Mot de passe',
-                'register.institution': 'Institution',
-                'register.role': 'Rôle',
-                'register.roleResearcher': 'Chercheur',
-                'register.roleViewer': 'Visualisateur',
-                'register.createAccount': 'Créer un Compte',
-                'register.hasAccount': 'Vous avez déjà un compte?',
-                'register.signinHere': 'Connectez-vous ici',
-                'register.creating': 'Création du compte...',
-                'register.success': 'Compte créé avec succès! Redirection vers la connexion...',
-                'register.error': 'Erreur d\'inscription',
-                'register.validEmail': 'Veuillez entrer un e-mail valide',
-                'register.minPassword': 'Le mot de passe doit contenir au moins 4 caractères',
-                'register.required': 'Ce champ est obligatoire',
-                
-                // Common
-                'common.processing': 'Traitement...',
-                'common.cancel': 'Annuler',
-                'common.confirm': 'Confirmer',
-                'common.save': 'Sauvegarder',
-                'common.delete': 'Supprimer',
-                'common.edit': 'Modifier',
-                'common.view': 'Voir',
-                'common.loading': 'Chargement...',
-                'common.error': 'Erreur',
-                'common.success': 'Succès',
-                'common.warning': 'Avertissement',
-                'common.info': 'Information'
-            },
-            pt: {
-                // Login page
-                'login.subtitle': 'Faça login em sua conta',
-                'login.username': 'Usuário',
-                'login.password': 'Senha',
-                'login.signin': 'Entrar',
-                'login.noAccount': 'Não tem uma conta?',
-                'login.signupHere': 'Cadastre-se aqui',
-                'login.signingIn': 'Entrando...',
-                'login.welcome': 'Bem-vindo! Redirecionando...',
-                'login.error': 'Erro no login',
-                'login.connectionError': 'Erro de conexão. Tente novamente.',
-                
-                // Register page
-                'register.title': 'Criar Conta',
-                'register.subtitle': 'Cadastre-se para acessar o sistema',
-                'register.username': 'Usuário',
-                'register.name': 'Nome',
-                'register.email': 'Endereço de E-mail',
-                'register.password': 'Senha',
-                'register.institution': 'Instituição',
-                'register.role': 'Função',
-                'register.roleResearcher': 'Pesquisador',
-                'register.roleViewer': 'Visualizador',
-                'register.createAccount': 'Criar Conta',
-                'register.hasAccount': 'Já tem uma conta?',
-                'register.signinHere': 'Entre aqui',
-                'register.creating': 'Criando conta...',
-                'register.success': 'Conta criada com sucesso! Redirecionando para login...',
-                'register.error': 'Erro no cadastro',
-                'register.validEmail': 'Por favor digite um e-mail válido',
-                'register.minPassword': 'A senha deve ter pelo menos 4 caracteres',
-                'register.required': 'Este campo é obrigatório',
-                
-                // Common
-                'common.processing': 'Processando...',
-                'common.cancel': 'Cancelar',
-                'common.confirm': 'Confirmar',
-                'common.save': 'Salvar',
-                'common.delete': 'Excluir',
-                'common.edit': 'Editar',
-                'common.view': 'Ver',
-                'common.loading': 'Carregando...',
-                'common.error': 'Erro',
-                'common.success': 'Sucesso',
-                'common.warning': 'Aviso',
-                'common.info': 'Informação'
-            }
         };
     }
 
@@ -246,9 +150,7 @@ class TranslationManager {
         
         const languages = [
             { code: 'en', name: '🇺🇸 English', flag: '🇺🇸' },
-            { code: 'es', name: '🇪🇸 Español', flag: '🇪🇸' },
-            { code: 'fr', name: '🇫🇷 Français', flag: '🇫🇷' },
-            { code: 'pt', name: '🇧🇷 Português', flag: '🇧🇷' }
+            { code: 'es', name: '🇪🇸 Español', flag: '🇪🇸' }
         ];
 
         languages.forEach(lang => {
