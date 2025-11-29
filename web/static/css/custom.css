@@ -752,6 +752,11 @@
     box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
 }
 
+.result-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
 .result-value {
     font-size: 48px;
     font-weight: bold;
@@ -763,4 +768,14 @@
     opacity: 0.9;
     text-transform: uppercase;
     letter-spacing: 1px;
+}
+
+.step-progress-text {
+    margin-top: 8px;
+}
+
+.step-progress-text small {
+    display: block;
+    color: #666;
+    font-style: italic;
 }

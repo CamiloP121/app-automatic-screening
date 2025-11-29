@@ -759,9 +759,10 @@ class Dashboard {
                         <table class="table table-hover table-sm">
                             <thead class="table-light sticky-top">
                                 <tr>
-                                    <th style="width: 60%">Abstract</th>
-                                    <th style="width: 20%">Predicción</th>
-                                    <th style="width: 20%">Confianza</th>
+                                    <th style="width: 50%">Abstract</th>
+                                    <th style="width: 15%">Predicción</th>
+                                    <th style="width: 15%">Confianza</th>
+                                    <th style="width: 20%">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="pipelineResultsTable">
@@ -776,7 +777,7 @@ class Dashboard {
 
     renderPipelineResultsRows(items, filter = 'all') {
         if (!items || items.length === 0) {
-            return '<tr><td colspan="3" class="text-center text-muted">No hay resultados</td></tr>';
+            return '<tr><td colspan="4" class="text-center text-muted">No hay resultados</td></tr>';
         }
         
         let filteredItems = items;
@@ -816,6 +817,12 @@ class Dashboard {
                     <td>
                         <small class="text-muted">${item.flag_complete ? 'Completo' : 'Parcial'}</small>
                     </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="dashboard.showEditPredictionModal('${item.id_article}', '${this.escapeHtml(item.abstract)}', '${item.prediction}', '${this.escapeHtml(item.reasoning || '')}')">
+                            <i class="fas fa-edit"></i> Modificar
+                        </button>
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -835,6 +842,100 @@ class Dashboard {
                 row.style.display = rowFilter === filter ? '' : 'none';
             }
         });
+    }
+
+    showEditPredictionModal(articleId, abstract, currentPrediction, reasoning) {
+        // Normalize prediction
+        const isInclude = currentPrediction && currentPrediction.toLowerCase().includes('include');
+        const normalizedPrediction = isInclude ? 'Include' : 'Exclude';
+        
+        const modalHtml = `
+            <div class="modal fade" id="editPredictionModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-edit"></i> Modificar Predicción</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Abstract</label>
+                                <div class="p-3 bg-light rounded" style="max-height: 200px; overflow-y: auto;">
+                                    <small>${abstract}</small>
+                                </div>
+                            </div>
+                            
+                            ${reasoning ? `
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Razonamiento IA</label>
+                                    <div class="p-3 bg-light rounded" style="max-height: 150px; overflow-y: auto;">
+                                        <small>${reasoning}</small>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="mb-3">
+                                <label for="predictionSelect" class="form-label fw-bold">Predicción</label>
+                                <select class="form-select" id="predictionSelect">
+                                    <option value="Include" ${normalizedPrediction === 'Include' ? 'selected' : ''}>
+                                        Incluir
+                                    </option>
+                                    <option value="Exclude" ${normalizedPrediction === 'Exclude' ? 'selected' : ''}>
+                                        Excluir
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <input type="hidden" id="editArticleId" value="${articleId}">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" onclick="dashboard.updateArticlePrediction()">
+                                <i class="fas fa-save"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('editPredictionModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('editPredictionModal'));
+        modal.show();
+    }
+
+    async updateArticlePrediction() {
+        const articleId = document.getElementById('editArticleId').value;
+        const newPrediction = document.getElementById('predictionSelect').value;
+        
+        try {
+            const response = await this.apiClient.updatePrediction(
+                this.apiClient.currentUser,
+                articleId,
+                newPrediction
+            );
+            
+            this.showNotification(response.message || 'Predicción actualizada exitosamente', 'success');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editPredictionModal'));
+            modal.hide();
+            
+            // Reload research details to show updated prediction
+            await this.showResearchDetail(this.selectedResearch);
+        } catch (error) {
+            console.error('Error updating prediction:', error);
+            this.showNotification(error.message || 'Error al actualizar la predicción', 'error');
+        }
     }
 
     renderDatasetsList(datasets) {
@@ -989,15 +1090,23 @@ class Dashboard {
         const research = this.selectedResearch;
         const username = this.apiClient.currentUser;
         
+        console.log('Research methodology:', research.methodology);
+        
         const steps = [
             { id: 1, name: 'Crear VectorStore', status: 'pending' },
             { id: 2, name: 'Búsqueda Semántica', status: 'pending' },
             { id: 3, name: 'Etiquetar con IA', status: 'pending' }
         ];
         
-        if (research.methodology === 'Full') {
+        // Check if methodology is Automatizada (case-insensitive and trim spaces)
+        const isAutomatizada = research.methodology && research.methodology.trim().toLowerCase() === 'automatizada';
+        console.log('Is Automatizada methodology?', isAutomatizada);
+        
+        if (isAutomatizada) {
             steps.push({ id: 4, name: 'Entrenar Modelo ML', status: 'pending' });
         }
+        
+        console.log('Total steps:', steps.length);
         
         this.renderPipelineProgress(steps);
         
@@ -1033,11 +1142,37 @@ class Dashboard {
             
             this.updateStepStatus(3, 'completed', `${labeledCount} etiquetados, ${failedCount} fallidos`);
             
-            // Step 4: Train ML Model (only if Full methodology)
-            if (research.methodology === 'Full') {
+            // Step 4: Train ML Model (only if Automatizada methodology)
+            const isAutomatizada = research.methodology && research.methodology.trim().toLowerCase() === 'automatizada';
+            if (isAutomatizada) {
                 this.updateStepStatus(4, 'running');
-                const summaryResponse = await this.apiClient.getLabelingSummary(researchId);
-                this.updateStepStatus(4, 'completed', 'Modelo entrenado exitosamente');
+                
+                try {
+                    // Get labeled results
+                    const labeledResults = await this.apiClient.getLabeledResults(researchId);
+                    
+                    if (!labeledResults.items || labeledResults.items.length === 0) {
+                        throw new Error('No hay artículos etiquetados para entrenar el modelo');
+                    }
+                    
+                    // Prepare data for training
+                    const trainingData = labeledResults.items.map(item => ({
+                        article_id: item.id_article,
+                        abstract: item.abstract,
+                        label: item.prediction ? item.prediction.toLowerCase() : 'exclude'
+                    }));
+                    
+                    this.updateStepProgress(4, `Preparando ${trainingData.length} artículos para entrenamiento...`);
+                    
+                    // Train model
+                    const trainResponse = await this.apiClient.trainMLModel(username, researchId, trainingData);
+                    
+                    this.updateStepStatus(4, 'completed', `Modelo entrenado con ${trainingData.length} artículos`);
+                } catch (error) {
+                    console.error('Error training ML model:', error);
+                    this.updateStepStatus(4, 'error', 'Error al entrenar el modelo: ' + error.message);
+                    throw error;
+                }
             }
             
             // Update research step
@@ -1047,7 +1182,7 @@ class Dashboard {
             
             // Show results
             setTimeout(() => {
-                this.showPipelineResults(researchId, labeledCount, articleIds.length);
+                this.showPipelineResults(researchId, labeledCount, articleIds.length, research.methodology);
             }, 2000);
             
         } catch (error) {
@@ -1070,6 +1205,9 @@ class Dashboard {
                         <div class="step-info">
                             <h5>${step.name}</h5>
                             <p class="step-status" id="step-status-${step.id}">Esperando...</p>
+                            <div class="step-progress-text" id="step-progress-text-${step.id}" style="display: none;">
+                                <small class="text-muted"></small>
+                            </div>
                         </div>
                     </div>
                     <div class="step-progress" id="step-progress-${step.id}" style="display: none;">
@@ -1111,13 +1249,22 @@ class Dashboard {
 
     updateStepProgress(stepId, message) {
         const stepStatus = document.getElementById(`step-status-${stepId}`);
+        const stepProgressText = document.getElementById(`step-progress-text-${stepId}`);
+        
         if (stepStatus) {
-            stepStatus.textContent = message;
+            stepStatus.textContent = 'Ejecutando...';
+        }
+        
+        if (stepProgressText) {
+            stepProgressText.style.display = 'block';
+            stepProgressText.querySelector('small').textContent = message;
         }
     }
 
-    showPipelineResults(researchId, labeledCount, totalArticles) {
+    showPipelineResults(researchId, labeledCount, totalArticles, methodology) {
         const container = document.getElementById('pipelineProgressContainer');
+        
+        const isAutomatizada = methodology && methodology.trim().toLowerCase() === 'automatizada';
         
         container.innerHTML += `
             <div class="pipeline-results mt-4">
@@ -1135,6 +1282,12 @@ class Dashboard {
                         <div class="result-value">${Math.round((labeledCount/totalArticles)*100)}%</div>
                         <div class="result-label">Tasa de Éxito</div>
                     </div>
+                    ${isAutomatizada ? `
+                        <div class="result-card">
+                            <div class="result-icon"><i class="fas fa-brain"></i></div>
+                            <div class="result-label">Modelo ML Entrenado</div>
+                        </div>
+                    ` : ''}
                 </div>
                 <div class="mt-4">
                     <button class="btn btn-primary" onclick="dashboard.backToResearch()">

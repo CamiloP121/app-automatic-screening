@@ -218,6 +218,57 @@ def get_labeled_results(research_id: str):
         logger.error(f"Error obteniendo resultados del etiquetado: {e}")
         raise HTTPException(status_code=500, detail=f"Error obteniendo resultados: {str(e)}")
 
+@app_labeler.put("/update-prediction", summary="Actualizar predicción de artículo",
+                 description="Actualiza la predicción de un artículo etiquetado.")
+def update_prediction(
+    username: str = Form(..., description="Nombre de usuario"),
+    article_id: str = Form(..., description="ID del artículo"),
+    prediction: str = Form(..., description="Nueva predicción: 'Include' o 'Exclude'")):
+    """Endpoint para actualizar la predicción de un artículo."""
+    user = Users.get_username(username)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="El usuario está inactivo.")
+    
+    try:
+        # Verificar que el artículo existe
+        article = Articles.get_id(article_id)
+        if not article:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artículo no encontrado.")
+        
+        # Verificar que existe una predicción para este artículo
+        label = AiLabeler.get_id(article_id)
+        if not label:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No existe predicción para este artículo.")
+        
+        # Validar predicción
+        if prediction.lower() not in ['include', 'exclude', 'included', 'excluded']:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Predicción inválida. Use 'Include' o 'Exclude'.")
+        
+        # Actualizar predicción
+        dict_update = {
+            "prediction": prediction,
+            "update_at": datetime.now()
+        }
+        
+        AiLabeler.update(article_id, dict_update)
+        db.session.commit()
+        
+        logger.info(f"Usuario {username} actualizó la predicción del artículo {article_id} a {prediction}")
+        
+        return {
+            "message": "Predicción actualizada exitosamente",
+            "article_id": article_id,
+            "prediction": prediction
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error actualizando predicción: {e}")
+        raise HTTPException(status_code=500, detail=f"Error actualizando predicción: {str(e)}")
+
 @app_labeler.post("/reprocess", summary="Reprocesar artículos etiquetados",
                   description="Reprocesa artículos para una investigación según el método indicado: 'all' para todos, 'fails' para solo los incompletos.")
 def labeler_reprocess(research_id: str = Form(..., description="ID de la investigación"),

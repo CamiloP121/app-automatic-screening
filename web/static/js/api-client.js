@@ -266,6 +266,60 @@ class APIClient {
         return this.get('/labeler/results', { research_id: researchId });
     }
 
+    async updatePrediction(username, articleId, prediction) {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('article_id', articleId);
+        formData.append('prediction', prediction);
+        
+        return this.putForm('/labeler/update-prediction', formData);
+    }
+
+    async trainMLModel(username, researchId, trainingData) {
+        // Convert training data to CSV format
+        const csvContent = this.convertToCSV(trainingData);
+        
+        // Create a Blob from CSV content
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const file = new File([blob], 'labeled_data.csv', { type: 'text/csv' });
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('research_id', researchId);
+        formData.append('file', file);
+        
+        return this.postForm('/classifier/train', formData);
+    }
+
+    convertToCSV(data) {
+        if (!data || data.length === 0) return '';
+        
+        // Get headers
+        const headers = Object.keys(data[0]);
+        
+        // Create CSV content
+        const csvRows = [];
+        
+        // Add header row
+        csvRows.push(headers.join(','));
+        
+        // Add data rows
+        for (const row of data) {
+            const values = headers.map(header => {
+                const value = row[header] || '';
+                // Escape quotes and wrap in quotes if contains comma or newline
+                const escaped = String(value).replace(/"/g, '""');
+                return escaped.includes(',') || escaped.includes('\n') || escaped.includes('"') 
+                    ? `"${escaped}"` 
+                    : escaped;
+            });
+            csvRows.push(values.join(','));
+        }
+        
+        return csvRows.join('\n');
+    }
+
     async updateResearchStep(researchId, step) {
         const formData = new FormData();
         formData.append('username', this.currentUser);
