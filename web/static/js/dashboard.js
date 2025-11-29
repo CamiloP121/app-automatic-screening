@@ -443,7 +443,7 @@ class Dashboard {
 
             ${pipelineResults ? this.renderPipelineResultsSection(pipelineResults) : ''}
 
-            ${trainedModels.length > 0 ? `
+            ${pipelineResults ? `
                 <div class="detail-section" id="mlModelsSection">
                     <h5><i class="fas fa-brain"></i> Modelos ML Entrenados</h5>
                     <div id="mlModelsList">
@@ -454,7 +454,7 @@ class Dashboard {
                         </div>
                     </div>
                 </div>
-            ` : ''}
+            ` : ''}}
 
             <div class="detail-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -487,8 +487,8 @@ class Dashboard {
             </div>
         `;
 
-        // Load ML models details if there are any
-        if (trainedModels.length > 0) {
+        // Load ML models details if there are pipeline results
+        if (pipelineResults) {
             this.loadMLModelsDetails(trainedModels);
         }
     }
@@ -1035,7 +1035,14 @@ class Dashboard {
         const container = document.getElementById('mlModelsList');
         
         if (!modelsDetails || modelsDetails.length === 0) {
-            container.innerHTML = '<p class="text-muted">No hay modelos ML entrenados.</p>';
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-muted mb-3">No hay modelos ML entrenados aún.</p>
+                    <button class="btn btn-primary" onclick="dashboard.trainNewModel()">
+                        <i class="fas fa-graduation-cap"></i> Entrenar Modelo
+                    </button>
+                </div>
+            `;
             return;
         }
 
@@ -1084,9 +1091,12 @@ class Dashboard {
                             </div>
                         </div>
                         
-                        <div class="mt-3 text-end">
-                            <button class="btn btn-outline-primary btn-sm" onclick="dashboard.openInferenceTab('${model.id}')">
-                                <i class="fas fa-chart-line"></i> Inferencia
+                        <div class="mt-3 d-flex gap-2 justify-content-end">
+                            <button class="btn btn-outline-primary btn-sm" onclick="dashboard.openInferenceTab('${model.id}', 'batch')">
+                                <i class="fas fa-database"></i> Predecir Resto de la Base
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="dashboard.openInferenceTab('${model.id}', 'individual')">
+                                <i class="fas fa-file-alt"></i> Predecir Individual
                             </button>
                         </div>
                     </div>
@@ -1095,6 +1105,16 @@ class Dashboard {
         });
         
         html += '</div>';
+        
+        // Add "Train New Model" button at the end
+        html += `
+            <div class="text-center mt-4">
+                <button class="btn btn-success" onclick="dashboard.trainNewModel()">
+                    <i class="fas fa-graduation-cap"></i> Entrenar Nuevo Modelo
+                </button>
+            </div>
+        `;
+        
         container.innerHTML = html;
 
         // Draw speedometers after HTML is rendered
@@ -1158,8 +1178,79 @@ class Dashboard {
         ctx.fillText(`${value}%`, centerX, centerY);
     }
 
-    openInferenceTab(modelId) {
-        alert('Próximamente: Funcionalidad de inferencia para el modelo ' + modelId);
+    openInferenceTab(modelId, type) {
+        const message = type === 'batch' 
+            ? 'Próximamente: Predicción masiva del resto de la base de datos'
+            : 'Próximamente: Predicción individual de artículos';
+        alert(message + ' (Modelo: ' + modelId + ')');
+    }
+
+    async trainNewModel() {
+        if (!this.selectedResearch) {
+            this.showNotification('No hay investigación seleccionada', 'error');
+            return;
+        }
+
+        const researchId = this.selectedResearch.id;
+        const username = this.apiClient.currentUser;
+
+        if (!confirm('¿Desea entrenar un nuevo modelo ML con los datos etiquetados?')) {
+            return;
+        }
+
+        const mlModelsContainer = document.getElementById('mlModelsList');
+        
+        try {
+            // Show loading state in ML models section
+            mlModelsContainer.innerHTML = `
+                <div class="text-center py-5">
+                    <img src="/static/imgs/load.gif" alt="Cargando..." style="max-width: 200px;">
+                    <p class="mt-3 text-muted">Entrenando nuevo modelo ML...</p>
+                    <p class="text-muted"><small>Este proceso puede tomar algunos minutos</small></p>
+                </div>
+            `;
+
+            // Show loading notification
+            this.showNotification('Obteniendo datos etiquetados...', 'info');
+
+            // Get labeled results from AI Labeler
+            const labeledResults = await this.apiClient.getLabeledResults(researchId);
+
+            if (!labeledResults.items || labeledResults.items.length === 0) {
+                throw new Error('No hay artículos etiquetados disponibles para entrenar el modelo');
+            }
+
+            // Prepare training data
+            const trainingData = labeledResults.items.map(item => ({
+                article_id: item.id_article,
+                abstract: item.abstract,
+                label: item.prediction ? item.prediction.toLowerCase() : 'exclude'
+            }));
+
+            this.showNotification(`Entrenando modelo con ${trainingData.length} artículos...`, 'info');
+
+            // Train model using the API client method
+            const trainResponse = await this.apiClient.trainMLModel(username, researchId, trainingData);
+
+            this.showNotification('Modelo entrenado exitosamente', 'success');
+
+            // Reload research details to show new model
+            await this.showResearchDetail(this.selectedResearch);
+
+        } catch (error) {
+            console.error('Error training model:', error);
+            this.showNotification('Error al entrenar el modelo: ' + error.message, 'error');
+            
+            // Restore ML models section on error
+            mlModelsContainer.innerHTML = `
+                <div class="text-center py-4">
+                    <p class="text-danger mb-3">Error al entrenar el modelo</p>
+                    <button class="btn btn-primary" onclick="dashboard.trainNewModel()">
+                        <i class="fas fa-graduation-cap"></i> Reintentar
+                    </button>
+                </div>
+            `;
+        }
     }
 
     showUploadDatasetModal() {
@@ -1495,6 +1586,10 @@ class Dashboard {
             this.showError(message);
         } else if (type === 'success') {
             this.showSuccess(message);
+        } else if (type === 'info') {
+            // For info messages, use a simple console log and optional alert for important ones
+            console.log('INFO:', message);
+            // You can show a toast notification here if you have a toast library
         } else {
             alert(message);
         }
