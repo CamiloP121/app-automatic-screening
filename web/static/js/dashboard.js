@@ -331,6 +331,15 @@ class Dashboard {
             const datasetsResponse = await this.apiClient.listDatasets(research.id);
             const datasets = datasetsResponse.datasets || [];
 
+            // Load trained ML models
+            let trainedModels = [];
+            try {
+                const modelsResponse = await this.apiClient.getTrainedModels(research.id);
+                trainedModels = modelsResponse.trained_models || [];
+            } catch (error) {
+                console.log('No trained models found');
+            }
+
             // Load pipeline results if step is not 'Create Research'
             let pipelineResults = null;
             if (fullResearch.step !== 'Create Research') {
@@ -341,14 +350,14 @@ class Dashboard {
                 }
             }
 
-            this.renderResearchDetail(fullResearch, datasets, pipelineResults);
+            this.renderResearchDetail(fullResearch, datasets, pipelineResults, trainedModels);
         } catch (error) {
             console.error('Error loading research details:', error);
             this.showNotification('Error al cargar los detalles de la investigación', 'error');
         }
     }
 
-    renderResearchDetail(research, datasets, pipelineResults = null) {
+    renderResearchDetail(research, datasets, pipelineResults = null, trainedModels = []) {
         const detailContent = document.getElementById('researchDetailContent');
 
         // Format dates
@@ -426,6 +435,19 @@ class Dashboard {
 
             ${pipelineResults ? this.renderPipelineResultsSection(pipelineResults) : ''}
 
+            ${trainedModels.length > 0 ? `
+                <div class="detail-section" id="mlModelsSection">
+                    <h5><i class="fas fa-brain"></i> Modelos ML Entrenados</h5>
+                    <div id="mlModelsList">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando modelos...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
             <div class="detail-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0"><i class="fas fa-database"></i> Datasets</h5>
@@ -456,6 +478,11 @@ class Dashboard {
                 </button>
             </div>
         `;
+
+        // Load ML models details if there are any
+        if (trainedModels.length > 0) {
+            this.loadMLModelsDetails(trainedModels);
+        }
     }
 
     showResearchList() {
@@ -974,6 +1001,164 @@ class Dashboard {
         html += '</div>';
 
         return html;
+    }
+
+    async loadMLModelsDetails(trainedModels) {
+        const container = document.getElementById('mlModelsList');
+        
+        try {
+            // Load details for each model
+            const modelDetailsPromises = trainedModels.map(model => 
+                this.apiClient.getModelDetails(model.id)
+            );
+            
+            const modelsDetails = await Promise.all(modelDetailsPromises);
+            
+            // Render models with their metrics
+            this.renderMLModels(modelsDetails);
+            
+        } catch (error) {
+            console.error('Error loading ML models details:', error);
+            container.innerHTML = '<p class="text-danger">Error al cargar los modelos ML</p>';
+        }
+    }
+
+    renderMLModels(modelsDetails) {
+        const container = document.getElementById('mlModelsList');
+        
+        if (!modelsDetails || modelsDetails.length === 0) {
+            container.innerHTML = '<p class="text-muted">No hay modelos ML entrenados.</p>';
+            return;
+        }
+
+        let html = '<div class="row g-3">';
+        
+        modelsDetails.forEach((model, index) => {
+            const createdDate = new Date(model.create_at);
+            const formattedDate = createdDate.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Multiply metrics by 100 for percentage display
+            const accuracy = Math.round((model.accuracy || 0) * 100);
+            const precision = Math.round((model.precision || 0) * 100);
+            const recall = Math.round((model.recall || 0) * 100);
+            const f1Score = Math.round((model.f1_score || 0) * 100);
+
+            html += `
+                <div class="col-md-6">
+                    <div class="ml-model-card">
+                        <div class="ml-model-header">
+                            <h6>
+                                <i class="fas fa-brain text-primary me-2"></i>
+                                Modelo v${model.version}
+                            </h6>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>${formattedDate}
+                            </small>
+                        </div>
+                        
+                        <div class="metrics-grid">
+                            <div class="metric-speedometer">
+                                <canvas id="metricAccuracy${index}" width="120" height="80"></canvas>
+                                <div class="metric-label">Accuracy</div>
+                            </div>
+                            <div class="metric-speedometer">
+                                <canvas id="metricPrecision${index}" width="120" height="80"></canvas>
+                                <div class="metric-label">Precision</div>
+                            </div>
+                            <div class="metric-speedometer">
+                                <canvas id="metricRecall${index}" width="120" height="80"></canvas>
+                                <div class="metric-label">Recall</div>
+                            </div>
+                            <div class="metric-speedometer">
+                                <canvas id="metricF1${index}" width="120" height="80"></canvas>
+                                <div class="metric-label">F1-Score</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 text-end">
+                            <button class="btn btn-outline-primary btn-sm" onclick="dashboard.openInferenceTab('${model.id}')">
+                                <i class="fas fa-chart-line"></i> Inferencia
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Draw speedometers after HTML is rendered
+        modelsDetails.forEach((model, index) => {
+            const accuracy = Math.round((model.accuracy || 0) * 100);
+            const precision = Math.round((model.precision || 0) * 100);
+            const recall = Math.round((model.recall || 0) * 100);
+            const f1Score = Math.round((model.f1_score || 0) * 100);
+
+            this.drawSpeedometer(`metricAccuracy${index}`, accuracy);
+            this.drawSpeedometer(`metricPrecision${index}`, precision);
+            this.drawSpeedometer(`metricRecall${index}`, recall);
+            this.drawSpeedometer(`metricF1${index}`, f1Score);
+        });
+    }
+
+    drawSpeedometer(canvasId, value) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const centerX = 60;
+        const centerY = 60;
+        const radius = 50;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw arc background (gray)
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI);
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.stroke();
+        
+        // Calculate angle based on value (0-100 mapped to PI to 2*PI)
+        const angle = Math.PI + (value / 100) * Math.PI;
+        
+        // Determine color based on value
+        let color;
+        if (value < 50) {
+            color = '#f44336'; // Red
+        } else if (value < 70) {
+            color = '#ff9800'; // Orange
+        } else if (value < 85) {
+            color = '#2196f3'; // Blue
+        } else {
+            color = '#4caf50'; // Green
+        }
+        
+        // Draw arc progress
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, Math.PI, angle);
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        
+        // Draw value text
+        ctx.font = 'bold 20px Arial';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${value}%`, centerX, centerY);
+    }
+
+    openInferenceTab(modelId) {
+        alert('Próximamente: Funcionalidad de inferencia para el modelo ' + modelId);
     }
 
     showUploadDatasetModal() {

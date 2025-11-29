@@ -383,6 +383,20 @@ class APIClient {
         return this.postForm('/classifier/execute_inference', formData);
     }
 
+    /**
+     * Obtener modelos ML entrenados por investigación
+     */
+    async getTrainedModels(researchId) {
+        return this.get(`/classifier/trained_models/${researchId}`);
+    }
+
+    /**
+     * Obtener detalles de un modelo ML específico
+     */
+    async getModelDetails(modelId) {
+        return this.get(`/classifier/trained_model/${modelId}`);
+    }
+
     // === GESTIÓN DE SESIÓN ===
     
     getCurrentUser() {
