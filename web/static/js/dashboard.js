@@ -1187,8 +1187,173 @@ class Dashboard {
         if (type === 'batch') {
             this.startBatchInference(modelId);
         } else {
-            alert('Próximamente: Predicción individual de artículos (Modelo: ' + modelId + ')');
+            this.showIndividualInference(modelId);
         }
+    }
+
+    showIndividualInference(modelId) {
+        // Switch to individual inference view
+        this.currentView = 'individual-inference';
+        document.getElementById('researchDetailView').style.display = 'none';
+        document.getElementById('individualInferenceView').style.display = 'block';
+        
+        // Store model ID for later use
+        this.currentInferenceModelId = modelId;
+        
+        // Render the interface
+        const container = document.getElementById('individualInferenceContent');
+        container.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-brain"></i> Predicción Individual</h5>
+                    <button class="btn btn-sm btn-secondary" onclick="dashboard.backToResearch()">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="abstractTextInput" class="form-label">Nuevo Abstract</label>
+                        <textarea 
+                            class="form-control" 
+                            id="abstractTextInput" 
+                            rows="8" 
+                            placeholder="Ingrese el abstract del artículo a clasificar..."></textarea>
+                    </div>
+                    <div class="text-end mb-4">
+                        <button class="btn btn-primary btn-lg" onclick="dashboard.executeTextInference()">
+                            <i class="fas fa-play-circle"></i> Predecir
+                        </button>
+                    </div>
+                    <div id="individualInferenceResults"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    async executeTextInference() {
+        const abstractText = document.getElementById('abstractTextInput').value.trim();
+        const resultsContainer = document.getElementById('individualInferenceResults');
+        
+        if (!abstractText) {
+            alert('Por favor ingrese un abstract');
+            return;
+        }
+        
+        try {
+            // Show loading
+            resultsContainer.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Procesando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Ejecutando predicción...</p>
+                </div>
+            `;
+            
+            const response = await this.apiClient.executeTextInference(
+                this.apiClient.currentUser,
+                this.currentInferenceModelId,
+                abstractText
+            );
+            
+            this.renderIndividualInferenceResults(response);
+            
+        } catch (error) {
+            console.error('Error in text inference:', error);
+            resultsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error: ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    renderIndividualInferenceResults(result) {
+        const resultsContainer = document.getElementById('individualInferenceResults');
+        
+        const prediction = result.prediction.toLowerCase();
+        const isIncluded = prediction.includes('include');
+        const probExcluded = Math.round(result.probability_excluded * 100);
+        const probIncluded = Math.round(result.probability_included * 100);
+        
+        resultsContainer.innerHTML = `
+            <div class="result-card">
+                <h5 class="mb-4"><i class="fas fa-chart-bar"></i> Resultado de la Predicción</h5>
+                
+                <div class="prediction-result mb-4">
+                    <div class="alert alert-${isIncluded ? 'success' : 'danger'} d-flex align-items-center">
+                        <i class="fas fa-${isIncluded ? 'check-circle' : 'times-circle'} fa-3x me-3"></i>
+                        <div>
+                            <h4 class="mb-0">${isIncluded ? 'INCLUIR' : 'EXCLUIR'}</h4>
+                            <p class="mb-0">Predicción del modelo ML</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="probability-card ${isIncluded ? 'active' : ''}">
+                            <canvas id="probIncludedChart" width="150" height="150"></canvas>
+                            <h6 class="mt-3">Probabilidad de INCLUIR</h6>
+                            <h3 class="text-success">${probIncluded}%</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="probability-card ${!isIncluded ? 'active' : ''}">
+                            <canvas id="probExcludedChart" width="150" height="150"></canvas>
+                            <h6 class="mt-3">Probabilidad de EXCLUIR</h6>
+                            <h3 class="text-danger">${probExcluded}%</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Draw probability charts
+        this.drawProbabilityChart('probIncludedChart', probIncluded, '#4caf50');
+        this.drawProbabilityChart('probExcludedChart', probExcluded, '#f44336');
+    }
+
+    drawProbabilityChart(canvasId, percentage, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const centerX = 75;
+        const centerY = 75;
+        const radius = 60;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw background circle
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fill();
+        
+        // Draw percentage arc
+        const angle = (percentage / 100) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + angle);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        
+        // Draw white circle in center to create donut effect
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 0.6, 0, 2 * Math.PI);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        
+        // Draw percentage text
+        ctx.font = 'bold 24px Arial';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${percentage}%`, centerX, centerY);
     }
 
     async startBatchInference(modelId) {
@@ -1841,6 +2006,7 @@ class Dashboard {
     backToResearch() {
         document.getElementById('pipelineView').style.display = 'none';
         document.getElementById('batchInferenceView').style.display = 'none';
+        document.getElementById('individualInferenceView').style.display = 'none';
         this.showResearchDetail(this.selectedResearch);
     }
 

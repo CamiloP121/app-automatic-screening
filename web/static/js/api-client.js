@@ -432,6 +432,24 @@ class APIClient {
     }
 
     /**
+     * Ejecutar inferencia sobre texto libre
+     */
+    async executeTextInference(username, modelId, abstractText) {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('model_id', modelId);
+        formData.append('abstract_text', abstractText);
+        
+        return this.makeRequest('/classifier/inference_text', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        });
+    }
+
+    /**
      * Ejecutar inferencia masiva con un modelo ML
      */
     async executeBatchInference(username, modelId, articleIds) {

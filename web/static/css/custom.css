@@ -848,7 +848,52 @@
     margin-bottom: 20px;
 }
 
+
 .loading-research p {
     font-size: 16px;
     color: #666;
 }
+
+/* Individual Inference Styles */
+.result-card {
+    background: #ffffff;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    box-shadow: var(--shadow-soft);
+}
+
+.prediction-result {
+    text-align: center;
+}
+
+.probability-card {
+    background: #f8f9fa;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    text-align: center;
+    transition: var(--transition);
+    border: 2px solid transparent;
+}
+
+.probability-card.active {
+    background: #ffffff;
+    border-color: var(--primary-color);
+    box-shadow: 0 5px 20px rgba(33, 150, 243, 0.2);
+}
+
+.probability-card canvas {
+    margin: 0 auto;
+    display: block;
+}
+
+.probability-card h6 {
+    color: #666;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.probability-card h3 {
+    font-weight: bold;
+    margin: 0;
+}
+

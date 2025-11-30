@@ -310,6 +310,53 @@ def execute_inference(username : str = Form(..., description="Nombre de usuario 
         logger.error(f"Error al ejecutar la inferencia: {str(e)}")
         db.session.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error interno del servidor.")
+
+@app_ml.post("/inference_text",
+    summary="Ejecutar inferencia con texto libre",
+    description="Ejecuta inferencia sobre un abstract proporcionado directamente sin guardarlo en la base de datos")
+def inference_text(username: str = Form(..., description="Nombre de usuario"),
+                   model_id: str = Form(..., description="ID del modelo a utilizar"),
+                   abstract_text: str = Form(..., description="Texto del abstract a clasificar")):
+    
+    # Verificar usuario
+    user = Users.get_username(username)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no autorizado")
+    
+    # Verificar modelo
+    model_details = TrainedModel.get_id(model_id)
+    if not model_details:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Modelo no encontrado")
+    
+    try:
+        # Cargar modelo + vectorizer
+        model_data_bytes = base64.b64decode(model_details.model_data)
+        model_and_vectorizer = pickle.loads(model_data_bytes)
+        model = model_and_vectorizer['model']
+        vectorizer = model_and_vectorizer['vectorizer']
+        
+        # Vectorizar el texto
+        input_data = vectorizer.transform([abstract_text], flag_lematized=True)
+        input_data = input_data.toarray()
+        
+        # Predecir
+        predict_result = model.predict(input_data)
+        logger.info(f"Text inference result: {predict_result}")
+        
+        return {
+            "prediction": predict_result["labels"][0],
+            "probability_excluded": float(predict_result["probabilities"][0][0]),
+            "probability_included": float(predict_result["probabilities"][0][1]),
+            "probabilities": {
+                "excluded": float(predict_result["probabilities"][0][0]),
+                "included": float(predict_result["probabilities"][0][1])
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in text inference: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al ejecutar inferencia: {str(e)}")
+
 @app_ml.post("/batch_inference", summary="Ejecutar inferencia masiva",
               description="Ejecuta inferencia sobre m\u00faltiples art\u00edculos con un modelo ML")
 async def batch_inference(username: str = Form(...), 
