@@ -1,5 +1,5 @@
 import os
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 #from langchain_groq import ChatGroq
 #from langchain_ollama import ChatOllama
 import json
@@ -48,7 +48,7 @@ class ChatLLM:
         """
         self.name_model = llm_type
 
-        allowed_types = ["ollama", "openai", "groq"]
+        allowed_types = ["ollama", "openai", "groq", "azure"]
 
         # Ollama LLM
         """
@@ -63,6 +63,19 @@ class ChatLLM:
             if not model: 
                 model = "gpt-3.5-turbo-16k"
             self.model = ChatOpenAI(model_name=model, temperature=temperature, **kwargs)
+        elif "azure" in llm_type:
+            assert os.environ.get("AZURE_OPENAI_API_KEY", "") != "", "Azure OpenAI API key is required for 'azure' llm type."
+            assert os.environ.get("AZURE_ENDPOINT", "") != "", "Azure OpenAI API endpoint is required for 'azure' llm type."
+            assert os.environ.get("AZURE_API_VERSION", "") != "", "Azure OpenAI API version is required for 'azure' llm type."
+            assert model is not None, "Model name must be specified for 'azure' llm type."
+            
+            self.model = AzureChatOpenAI(
+                azure_endpoint=os.environ.get("AZURE_ENDPOINT"),
+                azure_deployment=model, 
+                api_version=os.environ.get("AZURE_API_VERSION"),
+                temperature=temperature,
+                **kwargs
+            )
             """
             # Groq LLM
             elif "groq" in llm_type:
