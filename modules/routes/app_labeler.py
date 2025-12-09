@@ -17,8 +17,9 @@ from modules.Utils.load_helpers import load_text
 from modules.logger_config import logger
 
 # LLM
-clasificador_llm = ChatLLM(llm_type="openai", 
-                           model="gpt-4o-mini-2024-07-18", 
+clasificador_llm = ChatLLM(llm_type="azure", 
+                           #model="gpt-4o-mini-2024-07-18", 
+                           model="gpt-4.1-mini", 
                            temperature=0.0) 
 
 
