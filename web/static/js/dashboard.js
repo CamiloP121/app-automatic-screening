@@ -466,13 +466,9 @@ class Dashboard {
                 <div id="datasetsList">
                     ${this.renderDatasetsList(datasets)}
                 </div>
-                ${datasets.length > 0 && research.step === 'Create Research' ? `
-                    <div class="mt-3 text-end">
-                        <button class="btn btn-lg btn-primary" onclick="dashboard.startPipeline('${research.id}')">
-                            <i class="fas fa-play-circle"></i> Empezar Pipeline
-                        </button>
-                    </div>
-                ` : ''}
+                <div id="startPipelineContainer">
+                    <!-- Start Pipeline button will be rendered here if conditions met -->
+                </div>
             </div>
 
             <div class="mt-4">
@@ -490,6 +486,43 @@ class Dashboard {
         // Load ML models details if there are pipeline results
         if (pipelineResults) {
             this.loadMLModelsDetails(trainedModels);
+        }
+        // Check and render Start Pipeline button only if research has sufficient articles
+        this.checkAndRenderStartPipeline(research.id, datasets.length > 0, research.step);
+    }
+
+    async checkAndRenderStartPipeline(researchId, hasDatasets, step) {
+        const container = document.getElementById('startPipelineContainer');
+        if (!container) return;
+
+        // Hide by default
+        container.innerHTML = '';
+
+        // Only consider showing when research is in Create Research and has datasets
+        if (!hasDatasets || step !== 'Create Research') return;
+
+        try {
+            const resp = await this.apiClient.getAllArticlesByResearch(researchId);
+            const total = resp && (resp.total || 0);
+
+            // Threshold: more than 1100 articles
+            const threshold = 1100;
+            if (total > threshold) {
+                container.innerHTML = `
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-lg btn-primary" onclick="dashboard.startPipeline('${researchId}')">
+                            <i class="fas fa-play-circle"></i> Empezar Pipeline
+                        </button>
+                    </div>
+                `;
+            } else {
+                // Optionally show info about why button is hidden
+                container.innerHTML = `
+                    <div class="mt-3 text-end text-muted small">Se requieren más de ${threshold.toLocaleString()} artículos para ejecutar el pipeline. (Actual: ${total})</div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error checking article count for pipeline:', error);
         }
     }
 
