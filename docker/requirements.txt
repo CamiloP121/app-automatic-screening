@@ -10,7 +10,7 @@ SQLAlchemy==2.0.35
 jinja2==3.1.2
 thinc==8.3.4
 joblib
-psycopg2==2.9.10
+psycopg2-binary==2.9.10
 pandas==2.2.2
 ## add python modules here
 python-multipart==0.0.20
