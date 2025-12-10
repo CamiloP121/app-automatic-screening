@@ -19,7 +19,7 @@ from langchain.docstore.document import Document
 from modules.logger_config import logger
 
 # Embedding
-embedding = Embedding(embedding_type="openai", model = "text-embedding-3-small")
+embedding = Embedding(embedding_type="azure", model = "text-embedding-3-small")
 
 assert os.environ.get("db_uri_vs", "") != "", "DATABASE_URL is not set in environment variables"
 connection_string = os.environ.get("db_uri_vs", "")

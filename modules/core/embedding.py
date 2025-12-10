@@ -1,5 +1,5 @@
 import os
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
 
 class Embedding:
@@ -41,7 +41,7 @@ class Embedding:
             emb = Embedding(embedding_type="openai", model="text-embedding-3-large", kwargs={"key": "api_key"})
         """
 
-        allowed_types = ["spacy", "openai", "nomic", "huggingface"]
+        allowed_types = ["spacy", "openai", "nomic", "huggingface", "azure"]
 
 
         if "openai" in embedding_type:
@@ -49,6 +49,19 @@ class Embedding:
             if model is None: 
                 model = "text-embedding-3-large"
             self.model = OpenAIEmbeddings(model=model, **kwargs)
+
+        elif "azure" in embedding_type:
+            assert os.environ.get("AZURE_OPENAI_API_KEY", "") != "", "Azure OpenAI API key is required for 'azure' llm type."
+            assert os.environ.get("AZURE_ENDPOINT", "") != "", "Azure OpenAI API endpoint is required for 'azure' llm type."
+            assert os.environ.get("AZURE_API_VERSION", "") != "", "Azure OpenAI API version is required for 'azure' llm type."
+            assert model is not None, "Model name must be specified for 'azure' llm type."
+            
+            self.model = AzureOpenAIEmbeddings(
+                azure_endpoint=os.environ.get("AZURE_ENDPOINT"),
+                azure_deployment=model, 
+                api_version=os.environ.get("AZURE_API_VERSION"),
+                **kwargs
+            )
 
         
         elif "bert" in embedding_type:
